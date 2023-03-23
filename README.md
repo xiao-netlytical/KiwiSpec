@@ -1,4 +1,4 @@
-# kiwi
+# kiwilang
 kiwilang (Knowledge Interpreter With Intelligence) is a project aimed at developing a declarative programming language for documenting data processing by specifying relationships and transformations as code based on semi-structured data in JSON format. It was originally developed to specify the data processing for CAASM and security rules, with the goal of allowing people with a security background to document their expertise with minimal programming involved and quickly incorporate their knowledge into a product. The language is designed to be easy to adopt, read, understand, and maintain.
 
 The initial implementation is based on Python for semi-structured data in JSON format. Under the kiwilang project, several sub-projects have been developed.

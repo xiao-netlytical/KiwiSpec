@@ -1,0 +1,36 @@
+
+define read_path=../sample_data/zeek, write_path=../sample_data/result
+
+#DNS request for each source address in five minute window ordered by request count
+read read_path/conn.json as flows
+create {window_start: [{dns_src: dns_requests}]}  as r
+var i  select
+    flows[i]["id.orig_h"] as dns_src;
+    int(epoch_time(flows[i]["ts"])/300) as window_start;
+    sum(count_one(i)) as dns_requests;
+    where flows[i]["id.resp_p"] == 53;
+    order by dns_requests
+write write_path/top_dns_sender.json from r
+
+#one minute sampling of five min interval DNS request for per window and per source address
+read read_path/conn.json as flows
+create {window_start: {dns_src: cnt}}  as r
+var i,j select
+    flows[i]["id.orig_h"] as dns_src;
+    int(epoch_time(flows[i]["ts"])/60) as window_start;
+    sum(count_one(j)) group by dns_src, window_start as cnt;
+where flows[j]["id.resp_p"] == 53; flows[j]["id.orig_h"] == dns_src;
+int(epoch_time(flows[j]["ts"])/60) >= window_start and int(epoch_time(flows[j]["ts"])/60) < window_start + 5
+write write_path/5_min_dns_request.json from r
+
+# aggregate the connections between a source and destination pair, 
+# and sort pairs based on the distinct protocols
+read read_path/conn.json as flows
+create [{"ip":s_ip, "pkts": pkts, "bytes":bytes, "relationship":relationship}] as r
+var i select
+    flows[i]["id.orig_h"] as s_ip;
+    count distinct(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) as relationship;
+    sum(flows[i].get("orig_pkts", 0) + flows[i].get("resp_pkts", 0)) as pkts;
+    sum(flows[i].get("orig_bytes", 0) + flows[i].get("resp_bytes", 0)) as bytes;
+order by relationship desc
+write write_path/top_out_rel.json from r

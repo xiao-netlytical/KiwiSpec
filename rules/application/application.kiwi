@@ -1,0 +1,60 @@
+
+define read_path=../sample_data/zeek, write_path=../sample_data/result, app_define=../rules/application
+
+# identify application server and build ip address to application name binding
+read read_path/conn.json as flows, app_define/application_rule.json as application
+create {ip1:out_port} as r_src 
+var i select
+    flows[i]["id.orig_h"] as ip1;
+    collect set(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) group by ip1 as out_port
+
+create {ip2:in_port}  as r_dst 
+var i select
+    flows[i]["id.resp_h"] as ip2;
+    collect set(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) group by ip2 as in_port
+
+create {ip:apps} as r var ip, k
+select 
+r_dst[ip] as out_port; 
+    r_src.get(ip, []) as in_port; 
+    collect list(application[k]["app_name"]) group by ip as apps;
+where 
+    eval_logic_expr(application[k]["outbound_protocol"], out_port);
+    eval_logic_expr(application[k]["inbound_protocol"], in_port)
+write write_path/ip_to_servers.json from r
+
+# identify application server and build application name to ip addresses binding
+read read_path/conn.json as flows, app_define/application_rule.json as application
+create {ip1:out_port} as r_src 
+var i select
+    flows[i]["id.orig_h"] as ip1;
+    collect set(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) group by ip1 as out_port
+
+create {ip2:in_port}  as r_dst  
+var i select
+    flows[i]["id.resp_h"] as ip2;
+    collect set(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) group by ip2 as in_port
+
+create {app:ips:} as r 
+var ip, k select 
+    r_dst[ip] as out_port; 
+    r_src.get(ip, []) as in_port; 
+    application[k]["app_name"] as app;
+    collect set(ip) group by app as ips;
+where 
+    eval_logic_expr(application[k]["outbound_protocol"], out_port);
+    eval_logic_expr(application[k]["inbound_protocol"], in_port)
+write write_path/server_to_ips.json from r
+
+
+# get mapping of ip address to the list of applications
+# from the existing app to ips mapping
+read write_path/server_to_ips.json as srv
+create {ip: apps} as r
+var app select 
+    srv[_][_] as ip; 
+    collect set(app from srv[app]) as apps; where ip in srv[app]
+write write_path/server.json from r
+
+
+

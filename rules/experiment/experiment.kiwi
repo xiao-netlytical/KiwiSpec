@@ -1,0 +1,72 @@
+#using the object from X to create a list of size N, return all the combinations.
+#where the member of X is unique and the size of X is smaller than N.
+
+define input=[1,4,6,7,10], N=4
+create [r] as result
+var x select
+    collect distinct(input[x]) as r;
+where len(r) < N
+
+
+#Given a set of non-negative integers, and a value sum, 
+#determine if there is a subset of the given set with sum equal to given sum. 
+
+define input=[1,4,6,7,10], N=20
+create [r] as result
+var i select
+    collect distinct(input[i]) as r;
+where sum(r) == N
+
+
+#combine all the sections to contiguous sections
+#the sections are sorted by the lower end first
+
+section = sorted(section, section.l)
+update section 
+var i set
+    section[i+1].l  = section[i].l 
+    where section[i+1].l <= section[i].r+1
+
+    section[i+1].r  = section[i].r;
+    where section[i+1].r < section[i].r
+with section
+
+create r as result
+var i select
+    collect(section[i]) as r;
+    where section[i].r+1 < section[i+1].l 
+
+# check if an array is monotonic
+create r result
+var i select
+    all(a[i] <= a[i+1]) or all(a[i] >= a[i+1]) as r
+
+#put 0 to the end of the list
+
+create r as resut
+    Collect(a[i]) where a[i] != 0 as a1
+    collect(a[i]) where a[i] == 0 as a2
+    a1 + a2 as r
+
+#fill in none [1,none, 2, none, …] with previous value
+update a
+var i set
+    a[i] as tmp where a[i] is not none
+    a[i] = tmp where a[i] is none
+
+# find the first unique value from a list
+
+var i select
+    a[i] as value
+    sum(count_one(a[i])) group by value as ct
+with {value:ct} as tmp
+
+creat r as result
+    first(i from a[i]) where tmp[a[i]] == 1 as r
+
+# get prim number of N from set K
+create [prim] as result
+    k[i] as prim
+    range(2, k[i]) as test
+    where all(k[i]/test[j] !=0)
+

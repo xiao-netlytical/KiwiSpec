@@ -1,0 +1,188 @@
+[
+    {
+        "app_name": "Webserver",
+        "app_func": "Webserver",
+        "inbound_protocol": "(TCP_80 or TCP_443)",
+        "outbound_protocol": ""
+    },
+    {
+        "app_name": "AAAServer",
+        "app_func": "Authentication/Credentials",
+        "inbound_protocol": "((UDP_1812 and UDP_1813) or (UDP_1645 and UDP_1646)) ",
+        "outbound_protocol": ""
+    },
+    {
+        "app_name": "ActiveDirectory",
+        "app_func": "Authentication/Credentials",
+        "inbound_protocol": "TCP_135 and (TCP_389 or TCP_636) and (TCP_88 or UDP_88)",
+        "outbound_protocol": ""
+    },
+    {
+        "app_name": "FileServer",
+        "app_func": "",
+        "inbound_protocol": "TCP_445 or (TCP_2049 or UDP_2049) and  (UDP_137 or UDP_138 or TCP_137 or TCP_138) ",
+        "outbound_protocol": ""
+    },
+    {
+        "app_name": "Couchbase",
+        "app_func": "Databases",
+        "inbound_protocol": "((TCP_8091_to_TCP_8096 and TCP_11210 and TCP_11211) or (TCP_18091_to_TCP_18096 and TCP_11207)) and ((TCP_18091) or (TCP_18092))",
+        "outbound_protocol": ""
+    },
+    {
+        "app_name": "MongoDB",
+        "app_func": "Databases",
+        "inbound_protocol": "(TCP_27017 or TCP_27018 or TCP_27019)",
+        "outbound_protocol": ""
+    },
+    {
+        "app_name": "MSSQL",
+        "app_func": "Databases",
+        "inbound_protocol": "(TCP_1433 or TCP_1434 or UDP_1434)",
+        "outbound_protocol": ""
+    },
+    {
+        "app_name": "MYSQL (formerly MySQL)",
+        "app_func": "Databases",
+        "inbound_protocol": "(TCP_3306 or TCP_33060)",
+        "outbound_protocol": ""
+    },
+    {
+        "app_name": "Hadoop",
+        "app_func": "Databases",
+        "inbound_protocol": "(TCP_80 or (TCP_50075 and TCP_500770 and TCP_50090 and TCP_50105 and TCP_50030 and TCP_50060)) and TCP_8020 and TCP_50010 and TCP_50020 and TCP_50100",
+        "outbound_protocol": ""
+    },
+    {
+        "app_name": "Oracle",
+        "app_func": "Databases",
+        "inbound_protocol": "TCP_1521",
+        "outbound_protocol": ""
+    },
+    {
+        "app_name": "PostgresSQL",
+        "app_func": "Databases",
+        "inbound_protocol": "TCP_5432",
+        "outbound_protocol": ""
+    },
+    {
+        "app_name": "TFTP Server",
+        "app_func": "SharedServices",
+        "inbound_protocol": "UDP_69",
+        "outbound_protocol": ""
+    },
+    {
+        "app_name": "MSExchange",
+        "app_func": "SharedServices",
+        "inbound_protocol": "TCP_443 and TCP_25 and TCP_135 and (TCP_59531 or TCP_59532)",
+        "outbound_protocol": "TCP_25"
+    },
+    {
+        "app_name": "NetflowCollector",
+        "app_func": "NetworkManagement",
+        "inbound_protocol": "UDP_2055",
+        "outbound_protocol": ""
+    },
+    {
+        "app_name": "Splunk",
+        "app_func": "NetworkManagement",
+        "inbound_protocol": "TCP_9997 and (TCP_80 or TCP_443 or TCP_8000 or TCP_8089)",
+        "outbound_protocol": "TCP_9997 and TCP_8089"
+    },
+    {
+        "app_name": "SyslogServer",
+        "app_func": "NetworkManagement",
+        "inbound_protocol": "UDP_514",
+        "outbound_protocol": ""
+    },
+    {
+        "app_name": "VMWare_vCenter",
+        "app_func": "NetworkManagement",
+        "inbound_protocol": "(TCP_80 or TCP_443 or TCP_8443) and UDP_902",
+        "outbound_protocol": "TCP_902"
+    },
+    {
+        "app_name": "Zabbix",
+        "app_func": "NetworkManagement",
+        "inbound_protocol": "TCP_10051",
+        "outbound_protocol": "TCP_10050"
+    },
+    {
+        "app_name": "FTPServer",
+        "app_func": "SharedServices",
+        "inbound_protocol": "TCP_21",
+        "outbound_protocol": ""
+    },
+    {
+        "app_name": "MessageQueue",
+        "app_func": "Middleware",
+        "inbound_protocol": "TCP_5672 or TCP_5671 or (TCP_9092 and TCP_2181)",
+        "outbound_protocol": ""
+    },
+    {
+        "app_name": "DHCP",
+        "app_func": "SharedServices",
+        "inbound_protocol": "UDP_67",
+        "outbound_protocol": ""
+    },
+    {
+        "app_name": "DNSServer",
+        "app_func": "SharedServices",
+        "inbound_protocol": "TCP_53 or UDP_53",
+        "outbound_protocol": ""
+    },
+    {
+        "app_name": "NTPServer",
+        "app_func": "SharedServices",
+        "inbound_protocol": "UDP_123",
+        "outbound_protocol": "UDP_123"
+    },
+    {
+        "app_name": "WindowsUpdateServer",
+        "app_func": "SharedServices",
+        "inbound_protocol": "(TCP_80 or TCP_443) and TCP_8530  and TCP_8531",
+        "outbound_protocol": ""
+    },
+    {
+        "app_name": "MSSystemsCenter",
+        "app_func": "SharedServices",
+        "inbound_protocol": "UDP_67 and UDP_68 and UDP_69 and (TCP_80 or TCP_443) and (UDP_4011) and (TCP_8530 or TCP_8531) and (TCP_10123)",
+        "outbound_protocol": "TCP_135 and TCP_445 and TCP_2701 and TCP_3389 and ICMP"
+    },
+    {
+        "app_name": "MailServer",
+        "app_func": "SharedServices",
+        "inbound_protocol": "(TCP_25 or TCP_143 or TCP_993 or TCP_110 or TCP_995)",
+        "outbound_protocol": ""
+    },
+    {
+        "app_name": "Sharepoint",
+        "app_func": "Sharepoint",
+        "inbound_protocol": "(TCP_80 or TCP_443) and (TCP_16500_to_TCP_16519) and (TCP_22233_to_TCP_22236) and ((TCP_80_or_TCP_32843) or (TCP_443 or TCP_32844)) and (TCP_32845) and (TCP_32846)",
+        "outbound_protocol": "(TCP_16500_to_TCP_16519) and (TCP_22233_to_TCP_22236) and ((TCP_80 or TCP_32843) or (TCP_443 or TCP_32844)) and (TCP_32845) and (TCP_32846) and (TCP_1433 or UDP_1434)"
+    },
+    {
+        "app_name": "VMWare_ESXi",
+        "app_func": "NetworkManagement",
+        "inbound_protocol": "TCP_902 or UDP_902",
+        "outbound_protocol": "((TCP_8200 and UDP_8200) or (TCP_8100 and UDP_8100) or (TCP_8300 and UDP_8300))"
+    },
+    {
+        "app_name": "WebServer",
+        "app_func": "Unknown",
+        "inbound_protocol": "TCP_80 or TCP_8000 or TCP_8080 or TCP_443 or TCP_8443",
+        "outbound_protocol": ""
+    },
+    {
+        "app_name": "JumpServer",
+        "app_func": "SharedServices",
+        "inbound_protocol": "TCP_22 or TCP_3389",
+        "outbound_protocol": "TCP_22 or TCP_3389"
+    },
+    {
+        "app_name": "NMS",
+        "app_func": "NetworkManagement",
+        "inbound_protocol": "TCP_80 or TCP_443",
+        "outbound_protocol": "UDP_161 and ICMP"
+    }
+]

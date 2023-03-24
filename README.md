@@ -3,7 +3,7 @@ kiwilang (Knowledge Interpreter With Intelligence) is a project aimed at develop
 
 The initial implementation is based on Python for semi-structured data in JSON format. Under the kiwilang project, several sub-projects have been developed.
 
-1. kiwilang and interpreter
+## 1. kiwilang and interpreter
 The key building blocks of the language are identifiers, expressions, and relationship operators. The following two examples provide a quick preview of the language.
 
 The first example uses conn.log from Zeek to generate a list of the top 5 DNS initiators for every 5 minutes interval.
@@ -30,29 +30,29 @@ For more details on Kiwilang, please refer to the Kiwilang directory.
 For additional examples, please see the rules directory.
 
 
-2. CAASM (Cyber Asset Attack Surface Management) Rules in Kiwilang:
+## 2. CAASM (Cyber Asset Attack Surface Management) Rules in Kiwilang:
 
 The CAASM directory is intended to include rules for identifying applications, discovering relationships between application servers, and recognizing various patterns and aggregations related to workload, application, and relationships. Currently, the collected rules are limited to using conn.log data collected by Zeek as input.
 You can find the files containing collections of rules under the directory "rules/application".
 
-3. Security Rules in KiwiLang
+## 3. Security Rules in KiwiLang
 
 The security rules are designed to identify potential security threats or suspicious activity from the logs. Currently, there are two example rules available for identifying top requests and top DNS requests during each interval, based on the conn.log data collected by Zeek. These rules can be found in the 'rules/security' directory.
 
-4. Interview Question Coding in KiwiLang (For Fun)
+## 4. Interview Question Coding in KiwiLang (For Fun Experiment)
 
 Kiwilang was initially developed as a declarative approach for data processing and transformation, specifically for logs and configurations. To further explore the possibilities and limitations of KiwiLang, coding in KiwiLang to solve different kinds of interview questions has become a fun experimental project on the side.
 
 Currently, the KiwiLang interpreter cannot fully support the specifications required for this experiment. 
 The code to solve interview problems written in KiwiLang can be found under the 'fun_coding' directory.
 
-5. Working with Codex
+## 5. Working with Codex
 
 There are two sub-interests related to using KiwiLang with code generation from Codex:
 
-    . Using Codex to generate target code in languages such as Python, C, etc., from declararive specifications written in kiwiLang.
+1. Using Codex to generate target code in languages such as Python, C, etc., from declararive specifications written in kiwiLang.
 
-    . Using Codex to generate kiwiLang code from natural language descriptions.
+2. Using Codex to generate kiwiLang code from natural language descriptions.
     
 As a declarative language, kiwiLang is closely resembles natural language with accurate semantics. It is an effective way to document a task or an algorithm using human-like language. Specifications written in kiwiLang are easy to adopt, read, maintain, and are unambiguous. Generating target code from kiwiLang specifications can be a solution for a range of problems.
 
@@ -60,21 +60,28 @@ Although the recent OpenAI Codex model can generate Python, C, SQL, and other co
 
 This projects involve experiment with Codex to fine-tune the model or prompt engineering for kiwilang, with the goal of generating code in KiwiLang from natural language or generating a target code from kiwiLang.
 
-6. To try kiwilang with the rules and sample data of Zeek log
-   git clone kiwi
-   cd kiwilang
-   python3 kiwi_main.py ../rules/caasm/asset.kiwi
-   python3 kiwi_main.py ../rules/security/security.kiwi
-   python3 kiwi_main.py ../rules/caasm/asset.kiwi
+## 6. To try kiwilang with the rules and sample Zeek log
+   
+           git clone https://github.com/xiao-netlytical/kiwi.git 
+           cd kiwi
+           mkdir sample_data/result 
+           cd kiwilang
+           python3 kiwi_main.py ../rules/caasm/asset.kiwi
+           python3 kiwi_main.py ../rules/security/security.kiwi
+           python3 kiwi_main.py ../rules/caasm/asset.kiwi
 
-   the result files are under sample_data/result
+The results are in files under sample_data/result.
 
-7. Future Work:
+The sample data is from https://github.com/brimdata/zed-sample-data with reduced size.
+## 7. Future Work:
 
 Our plans for the future include:
 
-    . Collecting more rules for different kinds of data sources
-    . Further enhancing the language and improving performance
-    . Building a platform to manage rules plug_ins with scheduled jobs
-    . Mangaging resuts and developing graphical displays and reports
+. Collecting more rules for different kinds of data sources.
+
+. Further enhancing the language and improving performance.
+
+. Building a platform to manage rules plug_ins with scheduled jobs.
+
+. Mangaging result and developing graphical displays and reports
 

@@ -9,6 +9,7 @@ The key building blocks of the language are identifiers, expressions, and relati
 The first example uses conn.log from Zeek to generate a list of the top 5 DNS initiators for every 5 minutes interval.
 
     READ conn.json AS flows
+    CREATE {window_start: [{dns_src: dns_requests} LIMITED 10]}  AS result
     VAR i 
     SELECT
         flows[i]["id.orig_h"] AS dns_src;
@@ -16,15 +17,14 @@ The first example uses conn.log from Zeek to generate a list of the top 5 DNS in
         SUM(count_one(i)) GROUP BY dns_src,window_start AS dns_requests;
         WHERE flows[i]["id.resp_p"] == 53;
         ORDER BY dns_requests DESC
-    CREATE {window_start: [{dns_src: dns_requests} LIMITED 10]}  AS result
     WRITE top_dns_sender.json FROM result
 
 The second example is a fun coding challenge used to explore the language. The problem is to determine if there is a subset of a given set of non-negative integers that adds up to a given sum.
 
+    CREATE [r_set] AS result
     VAR i
     SELECT
         COLLECT(int_set[i]) AS r_set;  WHERE sum(r_set) == total
-    CREATE [r_set] AS result
 
 For more details on Kiwilang, please refer to the Kiwilang directory. 
 For additional examples, please see the rules directory.
@@ -60,13 +60,13 @@ Although the recent OpenAI Codex model can generate Python, C, SQL, and other co
 
 This projects involve experiment with Codex to fine-tune the model or prompt engineering for kiwilang, with the goal of generating code in KiwiLang from natural language or generating a target code from kiwiLang.
 
-## 6. To try kiwilang with the rules and sample Zeek log
+## 6. To try kiwilang with the rules and a sample Zeek log
    
            git clone https://github.com/xiao-netlytical/kiwi.git 
            cd kiwi
            mkdir sample_data/result 
            cd kiwilang
-           python3 kiwi_main.py ../rules/caasm/asset.kiwi
+           python3 kiwi_main.py ../rules/application/application.kiwi
            python3 kiwi_main.py ../rules/security/security.kiwi
            python3 kiwi_main.py ../rules/caasm/asset.kiwi
 

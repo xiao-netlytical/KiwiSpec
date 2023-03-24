@@ -1,3 +1,6 @@
+# Author: Hong Xiao
+# This program translates code in kiwilang to python and executes the python code.
+
 from util import *
 import functools
 

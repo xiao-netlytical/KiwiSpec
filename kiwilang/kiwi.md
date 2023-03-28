@@ -1,9 +1,9 @@
 
-KiwiLang: A Declarative Approach to Semi-Structured Data Processing
+# KiwiLang: A Declarative Approach to Semi-Structured Data Processing
 
 xiao-netlytical@google.com
 
-Description:
+## Description:
 
 Kiwilang is a project that provides a method for specifying data processing logic in a declarative manner. The solution aims to offer a language and a generic platform for specifying data processing logic in a semi-structured format, managing and executing the specifications in Kiwilang. The interested data processing includes searching and retrieving data with filters, data aggregation, data correlation, data transformation, recursive computation, and trending reports.
 
@@ -13,7 +13,7 @@ In addition to the language aspect, the Kiwilang platform also aims to provide a
 
 Furthermore, Kiwilang can also be used as an extension to any imperative language. By embedding the declarative specification for data processing into Python code, the data processing logic can be translated to Python code and executed with the rest of the code.
 
-Background:
+## Background:
 
 The Kiwilang project was conceived to provide a specification language that can document the data processing logic for applications in areas such as Cyber Asset Attack Surface Management (CAASM), Zero Trust analytics, and threat hunting.
 
@@ -26,36 +26,53 @@ The applications in the interested areas have common requirements in terms of da
 In detail, the data processings can be defined as:
 
 • Searching and retrieving: Select matching data as output from multiple inputs.
+
 • Searching with filtering: Select matching data that meets condition computations as output from multiple inputs.
+
 • Transformation: From the selected data, generate output after recomputing.
+
 • Aggregation: Collect a set of data, collect a distinct set, calculate sum, count, count distinct, min, max, mean, all, any, and states grouped by some values.
+
 • Correlation: Correlate data entries within the same input or multiple inputs.
+
 • Recursive computation: Compute relationships recursively which match the specified condition along a path.
+
 • Trending: Interval-based aggregation or state calculation with changing or trending reports.
+
 • Projection: Final presentation of the processed data.
 
-Specification and Language:
+## Specification and Language:
 
 The Kiwilang project aims to provide domain experts with a declarative language and platform to describe their data processing logic in an easily adoptable, readable, writable, and maintainable manner. The platform is designed to facilitate fast building and turnaround time with new security learnings.
 
 The declarative specification and language should allow domain experts to:
 
 . Specify input data in semi-structured format from any storage of memory, file, cloud storage, and/or database.
+
 . Focus on the specification of the data transformation from input to output.
+
 . Focus on describing data processing rules and logic.
+
 . Use a rich language to specify the needed data processing.
+
 . Use a language that is easy to adopt and understand.
+
 . Write specifications that are easy to read and maintain.
+
 
 To enable domain experts to describe their data processing logic in a declarative manner, the language and specification of Kiwilang should provide clear ways to specify the source of input data, data filtering and computation logic, output format, and target output storage. Kiwilang achieves this through five main constructs used to build a declarative specification:
 
 • READ: For reading input data from various sources such as memory, file, cloud storage, and/or database.
+
 • SELECT with condition, sorting, and limiting: For specifying data processing logic. This clause enables users to select and filter data from multiple inputs, transform the data, aggregate and correlate the data, perform recursive computation, and generate trending reports.
+
 • WITH: For pipelining output from a section to input of another section with user-defined data structures.
+
 • CREATE/UPDATE: For building output data structures. This clause enables users to create or update data structures that are needed for the output.
+
 • WRITE: For writing output to targets such as memory, file, cloud storage, and/or database.
 
-Expression and Language:
+## Expression and Language:
 
 The fundamental building block of kiwilang is expressions and identifiers. A basic expression is a path expression with identifiers in a semi-structured data path to access a data value. Compositional expressions is introduced to build more complext logic. Compositional expressions can be composed from basic or compositional expressions using operators including COLLECT, COLLECT DISTINCT, GROUP BY, ORDER BY, WHERE, CASE/END, LIMIT, SUM, COUNT, COUNT DISTINCT, MIN, MAX, MEAN, ALL, ANY, LAMBDA and REPEAT. With these operators, expressions can describe the logic of searching with filtering, math and logic computation, aggregation, correlation, transformation and recursive computations.
 By introducing identifiers as placeholders for all the possible instatiations, the declarative language allows users to focus on describing data processing and transformation from input to output, without worrying about walking and manipulating data structures step-by-step.
@@ -67,6 +84,7 @@ An expression calculated as a true or false value with identifier instantiated c
 Kiwilang borrows several keywords from SQL, including SELECT, WHERE, AS, GROUP BY, and ORDER BY, because they are widely adopted and self-explanatory. In SQL, the SELECT clause implies table row instantiations as the imperative procedure. In Kiwilang, however, users have more freedom with expressions and identifiers, and the underlying procedures allows any instantiation of identifiers with the calculated expressions. In this way, Kiwilang offers a more flexibility to specify data manipulation, while still drawing upon familiar and widely used keywords.
 
 In this example, Kiwilang allows users to specify variables i and j and then select data[i].interest and data[j].interest, where the condition data[i].interest == data[j].interest is met.
+
     VAR i, j SELECT data[i].interes; data[j].interes; where data[i].interes == data[j].interes
 
 A kiwilang specification is made from the constructs of READ, SELECT, WITH, CREATE, and WRITE.
@@ -76,24 +94,8 @@ A kiwilang specification can include a READ clause to specify data sources from 
 A kewilang specification can include a WITH cluase to pipeline an output of a specification to an input of another specification.
 A kewilang specification can include a  WRITE clause to specify an output to a file, a storage, a data structure name, or in a database.
 
-Output Template, Sementics and Result Generation:
 
-Kiwilang includes a CREATE construct for user to build outputs from expressions. The CREATE construct and cluase use template to define the outputs, which specify how to project the calculated expressions and identifiers as user desired. The templates are in a semi-structured format built from expression names and identifier names assigned by the SELECT clause. The AS clause binds an expression to an expression name, while the FROM clause declares an identifier name for output. All the expressions and identifiers referred by a template are grouped together to form an expression tuple. 
-
-The algorith to generate a final output based on the specifications in kiwilang invovles in two calculation phases.
-
-The first phase is Identifier Instantiation, Expression Calculation, and Tuple Materialization. 
-
-By instantiating identifiers with valid values, expressions can be materialized. A valid tuple value is formed by a valid set of instantiation of the identifiers and calculation of expressions which also meets the condition clauses. The result tuple set is collected as a non-redundant set of all the valid tuples.
-
-The second phase of the computation is output projection. The final outputs are defined by one or more templates specified in a CREATE cluase. Each template specifies how the output should be projected from the result tuple set. Since the result tuple includes the collection of referred expression and identifiers, the template can be populated by a tuple value.  The whole output set is generated by appending each population of the template.
-
-An interpreter is implemented to convert a specification to executable codes. The translated python code for exemple will execute the above sementics and algorithm. Kiwilang interpreter also combine, pipeline and optimize the loops with the instantiation and calculation to achieve the best performance.
-
-As a complete solution, a plateform is also under the development to manage specifications, data source and outputs. The platform will also provide the interface for pluging in the specifications and scheduling executions of the specifications. 
-
-
-Output Template, Semantics, and Result Generation:
+## Output Template, Semantics, and Result Generation:
 
 Kiwilang provides a CREATE construct that allows users to build outputs from expressions. The CREATE construct and clause use templates to define the outputs, which specify how to project the calculated expressions and identifiers as desired by the user. The templates are in semi-structured format and built from expression and identifier names assigned by the SELECT clause. The AS keyword binds an expression to an expression name, while the FROM keyword declares an identifier name for output. All the expressions and identifiers referred to by a template are grouped together to form an expression tuple.
 
@@ -110,7 +112,7 @@ An interpreter is implemented to convert a specification to executable code. The
 As a complete solution, a platform is also under development to manage specifications, data sources, and outputs. The platform will provide an interface for plugging in the specifications and scheduling executions of the specifications.
 
 
-Examples:
+## Examples:
 
 The following is a list of examples of data processing specifications in the applications of CAASM, risk analysis, and threat hunting. These specifications are written in kiwilang and use JSON format for input and output data structures.
 
@@ -314,7 +316,7 @@ In the specifications above:
 •	RETURN:  returns objects or a list of objects that become inputs of the next LAMBDA call.
 •	LOG:  specifies the objects that are appended to the final result of the REPEAT computation.
 
-Conclution:
+## Conclution:
 
 In conclusion, the Kiwilang project aims to provide a declarative language and platform for specifying data processing logic for semi-structured data. The key technical aspects of Kiwilang can be summarized as follows:
 

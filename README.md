@@ -27,7 +27,9 @@ The second example is a fun coding challenge used to explore the language. The p
         COLLECT(int_set[i]) AS r_set;  WHERE sum(r_set) == total
 
 For more details on Kiwilang, please refer to the Kiwilang directory. 
+
     https://github.com/xiao-netlytical/kiwi/blob/main/kiwilang/kiwi.md
+    
 For additional examples, please see the rules directory.
 
 

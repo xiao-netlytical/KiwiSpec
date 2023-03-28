@@ -6,17 +6,29 @@ import functools
 
 def strip_operator(s, pre_list):
 	for ss in pre_list:
-		if s.startswith(ss):
+		if s.lower().startswith(ss):
 			new_s = s[len(ss):]
 			return new_s.strip()[1:-1]
 	return s
 
 def strip_prefix(s, pre_list):
 	for ss in pre_list:
-		if s.startswith(ss):
+		if s.lower().startswith(ss):
 			new_s = s[len(ss):]
 			return new_s.strip()
 	return s
+
+def split(s, t):
+	if t.lower() in s:
+		x, y = s.split(t.lower())
+		return x, y
+	elif t.upper() in s:
+		x, y = s.split(t.upper())
+		return x, y
+	return s
+	
+def str_in(t, s):
+	return t.lower() in s or t.upper() in s
 
 class Position:
 		def __init__(self, idx, ln, col, fn, ftxt):
@@ -213,10 +225,10 @@ class CreateResultParser:
 
 		if self.order_text != '':
 			reversed = False
-			if self.order_text.strip().endswith('desc'):
+			if self.order_text.strip().lower().endswith('desc'):
 				reversed = True
 				self.order_text = self.order_text[:-len('desc')].strip()
-			elif self.order_text.strip().endswith('asc'):
+			elif self.order_text.strip().lower().endswith('asc'):
 				self.order_text = self.order_text[:-len('asc')].strip()
 
 			if self.order_text in self.var_agg_map.keys():
@@ -412,13 +424,13 @@ class CreateBodyParser:
 		self.where_text = ''
 
 		for q in query_list:
-			if q.startswith('select'):
+			if q.lower().startswith('select'):
 				self.body_text =  q[len('select '):]
-			if q.startswith('order by'):
+			if q.lower().startswith('order by'):
 				self.order_text = q[len('order by '):].strip()
-			if q.startswith('group by'):
+			if q.lower().startswith('group by'):
 				self.group_text = q[len('group by '):].strip()
-			if q.startswith('where'):
+			if q.lower().startswith('where'):
 				self.where_text = q[len('where '):]
 
 	def parse(self):
@@ -445,7 +457,7 @@ class CreateBodyParser:
 
 		def _startwith_agg(s, assign):
 			for i in s:
-				if assign.strip().startswith(i):
+				if assign.strip().lower().startswith(i):
 					return i
 			return None
 
@@ -480,8 +492,8 @@ class CreateBodyParser:
 		for assign in self.assign_list:
 			self.depend = set()
 			import re
-			if ' as ' in assign:
-				assign_ex, assign_value = list_strip(assign.split(' as '))
+			if str_in(' as ', assign):
+				assign_ex, assign_value = list_strip(split(assign, ' as '))
 				self.value_list.append(assign_value.strip())
 			else:
 				assign_ex = list_strip([assign])[0]
@@ -491,14 +503,14 @@ class CreateBodyParser:
 
 			agg_op = _startwith_agg(s, assign)
 
-			if agg_op is None and ' from ' in assign_ex:
-				assign_value, assign_ex = assign_ex.split(' from ')
+			if agg_op is None and str_in(' from ', assign_ex):
+				assign_value, assign_ex = split(assign_ex, ' from ')
 				self.value_list.append(assign_value.strip())
 
 			group_by_var = set()
 			if 	agg_op!= None:
-				if 'group by' in assign_ex:
-					assign_ex, group_by = assign_ex.split(' group by ')
+				if str_in(' group by ', assign_ex):
+					assign_ex, group_by = split(assign_ex, ' group by ')
 					group_by_var = list_strip(group_by.split(','))
 					group_by = ','.join(group_by_var)
 					group_by_var = set(group_by_var)
@@ -512,7 +524,7 @@ class CreateBodyParser:
 			else:
 				self.group_by_var.add(assign_value)
 
-			assign_ex.replace(' where ', ' ')
+			assign_ex = assign_ex.replace(' where ', ' ').replace(' WHERE ', ' ')
 
 			assign_expr = list_strip(re.split("[+,-,*,/,%,^,!,=,(,),' ',',','{','}']", assign_ex))
 			_get_depend_all(assign_expr, self.assign_depend, group_by_var)
@@ -608,37 +620,37 @@ class CreateBodyParser:
 			curr_cond_list, offset = _put_where_clause(curr_cond_list, offset)
 			for i in curr_assign_list:
 				if set(self.assign_depend[i]) <= tmp_var_loop_set:
-					if ' as ' not in self.assign_list[i]:
-						if ' from ' in self.assign_list[i]:
-							va, _ = self.assign_list[i].split(' from ')
+					if not str_in(' as ', self.assign_list[i]):
+						if str_in(' from ', self.assign_list[i]):
+							va, _ = split(self.assign_list[i], ' from ')
 							vu = va
 							if va in self.result_value_list:
 								self.r_tuple += f"""'{va}':{va},"""
 						continue
 					tmp_collect = False
-					vu, va = list_strip(self.assign_list[i].split(' as '))
+					vu, va = list_strip(split(self.assign_list[i], ' as '))
 					vu_if = ''
 					if va in self.var_agg_map.keys():
-						if ' group by ' in vu:
-							vu, c_vu = vu.split(' group by ')
+						if str_in(' group by ',vu):
+							vu, c_vu = split(vu, ' group by ')
 							c_vu = c_vu.split(',')
 							for c_v in c_vu:
 								c_v = c_v.strip()
 								if c_v not in self.value_list and c_v in self.result_value_list:
 									self.r_tuple +=f"""'{c_v}':{c_v},"""
 						vu = vu.strip()
-						if ' where ' in vu:
-							vu, vu_if = vu.split(' where ')
+						if str_in(' where ', vu):
+							vu, vu_if = split(vu, ' where ')
 
 						vu = strip_operator(vu, ['collect list', 'collect set', 'count distinct',
 												 'min', 'max', 'sum'])
-						if ' from ' in vu:
-							vu, _ = vu.split(" from ")
+						if str_in(' from ', vu):
+							vu, _ = split(vu, " from ")
 						vu = vu.strip()
 						tmp_collect = True
 					else:
-						if ' where ' in vu:
-							vu, vu_if = vu.split(" where ")
+						if str_in(' where ', vu):
+							vu, vu_if = split(vu, " where ")
 
 					check_str, self.access_map_list = check_access_map(self.access_map_list, vu)
 					if check_str:
@@ -739,7 +751,7 @@ class UpdateBodyParser:
 		self.where_text = ''
 
 		for q in query_list:
-			if q.startswith('where'):
+			if q.lower().startswith('where'):
 				self.where_text = q[len('where '):]
 
 	def parse(self):
@@ -762,12 +774,12 @@ class UpdateBodyParser:
 		for assign_val in self.assign_list:
 			depend = set()
 			import re
-			if ' as ' in assign_val:
-				vu, va = assign_val.split(' as ')
+			if str_in(' as ', assign_val):
+				vu, va = split(assign_val, ' as ')
 				assign_expr = list_strip(re.split("[+,-,*,/,%,^,!,=,(,),' ',',','{','}']", vu)) \
 							+ list_strip(re.split("[+,-,*,/,%,^,!,=,(,),' ',',','{','}']", va))
-			elif ' order by ' in assign_val:
-				vu, va = assign_val.split(' order by ')
+			elif str_in(' order by ',assign_val):
+				vu, va = split(assign_val,' order by ')
 				assign_expr = list_strip(re.split("[+,-,*,/,%,^,!,=,(,),' ',',','{','}']", vu))
 
 			for expr in assign_expr:
@@ -823,8 +835,8 @@ class UpdateBodyParser:
 			new_assign_list = []
 			for i in curr_assign_list:
 				if set(self.assign_depend[i]) <= tmp_var_loop_set:
-					if ' as ' in self.assign_list[i]:
-						vu, va = list_strip(self.assign_list[i].split(' as '))
+					if str_in(' as ', self.assign_list[i]):
+						vu, va = list_strip(split(self.assign_list[i],' as '))
 						for v_i in [vu, va]:
 							check_str, self.access_map_list = check_access_map(self.access_map_list, v_i)
 							if check_str:
@@ -833,8 +845,8 @@ class UpdateBodyParser:
 							va = vu.replace("|", "+")
 						self.for_loop_list.append(f"""{vu} = {va}""")
 
-					if ' order by ' in self.assign_list[i]:
-						vu, va = list_strip(self.assign_list[i].split(' order by '))
+					if str_in(' order by ', self.assign_list[i]):
+						vu, va = list_strip(split(self.assign_list[i],' order by '))
 						check_str, self.access_map_list = check_access_map(self.access_map_list, vu)
 						k,_=va.strip('{}').split(':')
 						if check_str:
@@ -889,13 +901,13 @@ def FromPaser(fn, text):
 	l = list_strip(text.split(","))
 	r = ''
 	for fl in l:
-		f, s = fl.split(' as ')
+		f, s = split(fl, ' as ')
 		r += f'{s} = read_json_file("{f}");'
 	return r
 
 def ToPaser(fn, text):
 	text = strip_prefix(text, ['write'])
-	f, d = text.split(' from ')
+	f, d = split(text, ' from ')
 	f = f.strip()
 	d = d.strip()
 	r = f'write_json_file("{f}", {d});'
@@ -916,13 +928,13 @@ def CreatePaser(fn, text):
 	body_text = ''
 
 	for q in query_list:
-		if q.startswith('create'):
+		if q.lower().startswith('create'):
 			create_text, result_var = list_strip(parser_get_query_list(q, ['as']))
 			create_text = create_text[len('create '):]
 			result_var = result_var[len('as '):]
-		if q.startswith('select'):
+		if q.lower().startswith('select'):
 			body_text = q
-		if q.startswith('var'):
+		if q.lower().startswith('var'):
 			var_list = list_strip(q[len('var'):].split(','))
 
 	lexer = ResultLexer(fn, create_text)
@@ -968,11 +980,11 @@ def UpdatePaser(fn, text):
 	body_text = ''
 
 	for q in query_list:
-		if q.startswith('update'):
+		if q.lower().startswith('update'):
 			result_var = q[len('update'):].strip()
-		if q.startswith('set'):
+		if q.lower().startswith('set'):
 			body_text = q
-		if q.startswith('var'):
+		if q.lower().startswith('var'):
 			var_list = list_strip(q[len('var'):].split(','))
 
 
@@ -995,6 +1007,8 @@ def find_boundary(text, boundary, follows):
 	body_end = -1
 	for b in boundary:
 		next = tmp_text.find(b)
+		if next == -1:
+			next = tmp_text.find(b.upper())
 		if next != -1 and tmp_text[next-1] in [' ', '\n', '\t', ';'] \
 			and tmp_text[next+len(b)] in [' ', '\n', '\t', ';']:
 			if not follows or tmp_text[:next-1].strip("' ', '\n', '\t'")[-1] in follows:
@@ -1025,16 +1039,16 @@ def QueryParser(fn, text):
 	unit_v = ''
 	for q in query_list:
 		print(q, '\n')
-		if q.startswith('read'):
+		if q.lower().startswith('read'):
 			result_list.append(FromPaser(fn, q))
-		if q.startswith('with'):
+		if q.lower().startswith('with'):
 			continue
-		if q.startswith('write'):
+		if q.lower().startswith('write'):
 			result_list.append(ToPaser(fn, q))
-		if q.startswith('create'):
+		if q.lower().startswith('create'):
 			unit_r, unit_v = CreatePaser(fn, q)
 			result_list.append(unit_r)
-		if q.startswith('update'):
+		if q.lower().startswith('update'):
 			unit_r, unit_v = UpdatePaser(fn, q)
 			result_list.append(unit_r)
 
@@ -1077,8 +1091,8 @@ def main():
 
 	def _startswith_list(s, l):
 		for i in l:
-			if  s.strip().startswith(i):
-				return i
+			if  s.strip().lower().startswith(i):
+				return i.lower()
 		return ''
 	
 	def _pass_define(line):
@@ -1102,7 +1116,7 @@ def main():
 				if line.strip().startswith('#'):
 					continue
 
-				if line.strip().startswith('define'):
+				if line.strip().lower().startswith('define'):
 					_pass_define(line)
 					continue
 

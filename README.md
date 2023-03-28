@@ -3,7 +3,7 @@ kiwilang (Knowledge Interpreter With Intelligence) is a project aimed at develop
 
 The initial implementation is based on Python for semi-structured data in JSON format. Under the kiwilang project, several sub-projects have been developed.
 
-## 1. kiwilang and interpreter
+## 1. Kiwilang and Interpreter
 The key building blocks of the language are identifiers, expressions, and relationship operators. The following two examples provide a quick preview of the language.
 
 The first example uses conn.log from Zeek to generate a list of the top 5 DNS initiators for every 5 minutes interval.
@@ -27,6 +27,7 @@ The second example is a fun coding challenge used to explore the language. The p
         COLLECT(int_set[i]) AS r_set;  WHERE sum(r_set) == total
 
 For more details on Kiwilang, please refer to the Kiwilang directory. 
+    https://github.com/xiao-netlytical/kiwi/blob/main/kiwilang/kiwi.md
 For additional examples, please see the rules directory.
 
 

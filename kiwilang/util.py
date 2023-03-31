@@ -27,6 +27,26 @@ def epoch_time(t):
     dt =datetime.strptime(t.split('.')[0], '%Y-%m-%dT%H:%M:%S')
     return dt.timestamp()
 
+def _eval_logic_fix_range(logic_range, input):
+    range_unit = {}
+    input_unit = []
+    for i_range in logic_range:
+        if '_to_' in i_range:
+            r = i_range[len('TCP_'):].split('_to_')
+            range_unit[i_range] = [int(r[0]), int(r[1])]
+    if not range_unit:
+        return input
+    for i in input:
+        port_i = int(i[len('TCP_'):])
+        port_s = i
+        for k, r_i in range_unit.items():
+            if port_i >= r_i[0] and port_i <= r_i[1]:
+                port_s = k
+                print(port_s, i)
+                break
+        input_unit.append(port_s) 
+    return input_unit
+        
 def eval_logic_expr(logic_input, input):
     if logic_input.strip() =='':
         return True
@@ -35,9 +55,10 @@ def eval_logic_expr(logic_input, input):
     logic_b = logic_input
     for k, v in rep.items():
         logic_b = logic_b.replace(k, v)
-    s = logic_b.split()
-    logic_b = ''.join([x+'=False;' for x in s])
-    input_b = ''.join([x+'=True;' for x in input])
+    logic_unit = logic_b.split()
+    input_unit = _eval_logic_fix_range(logic_unit, input)
+    logic_b = ''.join([x+'=False;' for x in logic_unit])
+    input_b = ''.join([x+'=True;' for x in input_unit])
     r = 'rst='+logic_input
     exec(logic_b + input_b + r, globals())
     return rst

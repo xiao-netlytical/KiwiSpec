@@ -1,11 +1,5 @@
 [
     {
-        "app_name": "Webserver",
-        "app_func": "Webserver",
-        "inbound_protocol": "(TCP_80 or TCP_443)",
-        "outbound_protocol": ""
-    },
-    {
         "app_name": "AAAServer",
         "app_func": "Authentication/Credentials",
         "inbound_protocol": "((UDP_1812 and UDP_1813) or (UDP_1645 and UDP_1646)) ",
@@ -26,7 +20,7 @@
     {
         "app_name": "Couchbase",
         "app_func": "Databases",
-        "inbound_protocol": "((TCP_8091_to_TCP_8096 and TCP_11210 and TCP_11211) or (TCP_18091_to_TCP_18096 and TCP_11207)) and ((TCP_18091) or (TCP_18092))",
+        "inbound_protocol": "((TCP_8091_to_8096 and TCP_11210 and TCP_11211) or (TCP_18091_to_18096 and TCP_11207)) and ((TCP_18091) or (TCP_18092))",
         "outbound_protocol": ""
     },
     {
@@ -158,8 +152,8 @@
     {
         "app_name": "Sharepoint",
         "app_func": "Sharepoint",
-        "inbound_protocol": "(TCP_80 or TCP_443) and (TCP_16500_to_TCP_16519) and (TCP_22233_to_TCP_22236) and ((TCP_80_or_TCP_32843) or (TCP_443 or TCP_32844)) and (TCP_32845) and (TCP_32846)",
-        "outbound_protocol": "(TCP_16500_to_TCP_16519) and (TCP_22233_to_TCP_22236) and ((TCP_80 or TCP_32843) or (TCP_443 or TCP_32844)) and (TCP_32845) and (TCP_32846) and (TCP_1433 or UDP_1434)"
+        "inbound_protocol": "(TCP_80 or TCP_443) and (TCP_16500_to_16519) and (TCP_22233_to_22236) and ((TCP_80 or TCP_32843) or (TCP_443 or TCP_32844)) and (TCP_32845) and (TCP_32846)",
+        "outbound_protocol": "(TCP_16500_to_16519) and (TCP_22233_to_22236) and ((TCP_80 or TCP_32843) or (TCP_443 or TCP_32844)) and (TCP_32845) and (TCP_32846) and (TCP_1433 or UDP_1434)"
     },
     {
         "app_name": "VMWare_ESXi",
@@ -169,7 +163,7 @@
     },
     {
         "app_name": "WebServer",
-        "app_func": "Unknown",
+        "app_func": "WebServer",
         "inbound_protocol": "TCP_80 or TCP_8000 or TCP_8080 or TCP_443 or TCP_8443",
         "outbound_protocol": ""
     },

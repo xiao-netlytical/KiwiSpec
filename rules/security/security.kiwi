@@ -1,6 +1,36 @@
 
 define read_path=../sample_data/zeek, write_path=../sample_data/result
 
+#Discovery-Network Service Scanning
+read read_path/conn.json as flows
+CREATE [{"source": source, "dport":dport, "dhost": dhost}] as r
+VAR i SELECT
+flows[i]["id.orig_h"] as source;
+flows[i]["id.orig_h"] as source;
+COLLECT SET(flows[i]["id.resp_h"]) as  dhost;
+COLLECT SET(flows[i]["id.resp_p"]) as  dport;
+where flows[i].get("local_orig", True) and flows[i].get("local_resp", True);    
+    flows[i]["conn_state"] in ["S0", "REJ"]
+write write_path/top_sender.json from r
+
+#Discovery-Network Service Scanning, sort by dport for r1 and dhost for r2, and limited to 10
+read read_path/conn.json as flows
+CREATE [{"source": source, "dport":dport, "dport_c":dport_c}] AS r1 ;
+       [{"source": source, "dhost": dhost, "dhost_c": dhost_c}] AS r2  
+VAR i SELECT
+flows[i]["id.orig_h"] as source;
+COLLECT SET(flows[i]["id.resp_h"]) as dhost;
+COLLECT SET(flows[i]["id.resp_p"]) as dport;
+COUNT DISTINCT(flows[i]["id.resp_h"]) as dhost_c;
+COUNT DISTINCT(flows[i]["id.resp_p"]) as dport_c;
+where flows[i].get("local_orig", True) and flows[i].get("local_resp", True);    
+    flows[i]["conn_state"] in ["S0", "REJ"];
+ORDER BY dhost_c DESC LIMIT 10 FOR r2;  dport_c DESC LIMIT 10 FOR r1
+write write_path/top_sender_dport.json from r1, 
+	  write_path/top_sender_dhost.json from r2
+
+
+
 #DNS request for each source address in five minute window ordered by request count
 read read_path/conn.json as flows
 create {window_start: [{dns_src: dns_requests}]}  as r

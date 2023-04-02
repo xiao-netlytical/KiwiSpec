@@ -42,7 +42,6 @@ def _eval_logic_fix_range(logic_range, input):
         for k, r_i in range_unit.items():
             if port_i >= r_i[0] and port_i <= r_i[1]:
                 port_s = k
-                print(port_s, i)
                 break
         input_unit.append(port_s) 
     return input_unit

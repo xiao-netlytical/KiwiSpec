@@ -201,18 +201,8 @@ class CreateResultParser:
 
 		return r_tail
 
-	def parse(self):
-		self.group_by = set()
-		self.group_by_base = set()
-		self.agg_list_expr = set()
-		self.agg_set_expr = set()
-		self.agg_sum_expr = set()
-		self.agg_min_expr = set()
-		self.agg_max_expr = set()
-		self.agg_count_distinct = set()
-
+	def preparse(self):
 		r_head = 'default_group_by="default_group_by"\n'
-		r_tail = ''
 		for k in self.var_agg_map.keys():
 			if self.var_agg_map[k]["op"] in ['collect list', 'collect set', 'count distinct', 'sum', 'min', 'max']:
 				tmp = '{}'
@@ -222,34 +212,72 @@ class CreateResultParser:
 			if self.var_agg_map[k]["op"] == 'count distinct':
 				tmp = '{}'
 				r_head += f"""{k}_ = {tmp}\n"""
+		return r_head
 
+	def parse(self):
+		self.group_by = set()
+		self.group_by_base = set()
+		self.agg_list_expr = set()
+		self.agg_set_expr = set()
+		self.agg_sum_expr = set()
+		self.agg_min_expr = set()
+		self.agg_max_expr = set()
+		self.agg_count_distinct = set()
+		r_tail = ''
+		r_head = ''
 		if self.order_text != '':
-			reversed = False
-			if self.order_text.strip().lower().endswith('desc'):
-				reversed = True
-				self.order_text = self.order_text[:-len('desc')].strip()
-			elif self.order_text.strip().lower().endswith('asc'):
-				self.order_text = self.order_text[:-len('asc')].strip()
+			order_text_list = self.order_text.split(';')
+			for order_l in order_text_list:
 
-			if self.order_text in self.var_agg_map.keys():
-				r_tail += f"""result_tuple = sorted(result_tuple, key=lambda l: eval(l['{self.order_text}']), reverse={reversed})\n"""
-			else:
-				r_tail += f"""result_tuple = sorted(result_tuple, key=lambda l: l['{self.order_text}'], reverse={reversed})\n"""
+				if str_in(' for ', order_l):
+					order_t, order_v = split(order_l, ' for ')
+				else:
+					order_t = order_l
+					order_v = self.result_var
+
+				order_t = order_t.strip()
+				order_v = order_v.strip()
+				if order_v != self.result_var:
+					continue
+
+				if str_in(' limit ', order_t):
+					order_t, limit_v = split(order_t, ' limit ')
+					limit_v =  int(limit_v.strip())
+				else:
+					limit_v = -1
+
+				reversed = False
+				if order_t.lower().endswith('desc'):
+					reversed = True
+					order_t = order_t[:-len('desc')].strip()
+				elif order_t.lower().endswith('asc'):
+					order_t = order_t[:-len('asc')].strip()
+
+				if order_t.lower().endswith('desc'):
+					reversed = True
+					order_t = order_t[:-len('desc')].strip()
+				elif order_t.lower().endswith('asc'):
+					order_t = order_t[:-len('asc')].strip()
+
+				if order_t in self.var_agg_map.keys():
+					r_tail += f"""result_tuple['{self.result_var}'] = sorted(result_tuple['{self.result_var}'], key=lambda l: eval(l['{order_t}']), reverse={reversed})[:{limit_v}]\n"""
+				else:
+					r_tail += f"""result_tuple['{self.result_var}'] = sorted(result_tuple['{self.result_var}'], key=lambda l: l['{order_t}'], reverse={reversed})[:{limit_v}]\n"""
 
 		if self.current_tok.type == 'STR' or self.current_tok.type == 'EXPR':
 			tmp_expr = self.current_tok.value
 			if tmp_expr in self.var_agg_map.keys():
-				r_tail += f"""if result_tuple: \n"""
-				r_tail += f"""    {self.result_var} = eval(result_tuple[0]['{tmp_expr}']) \n"""
+				r_tail += f"""if result_tuple['{self.result_var}']: \n"""
+				r_tail += f"""    {self.result_var} = eval(result_tuple['{self.result_var}'][0]['{tmp_expr}']) \n"""
 				r_tail += f"""else: \n"""
 				r_tail += f"""    {self.result_var} = [] \n"""
 			else:
-				r_tail += f"""if result_tuple: \n"""
-				r_tail += f"""    {self.result_var} = result_tuple[0]['{tmp_expr}'] \n"""
+				r_tail += f"""if result_tuple['{self.result_var}']: \n"""
+				r_tail += f"""    {self.result_var} = result_tuple['{self.result_var}'][0]['{tmp_expr}'] \n"""
 				r_tail += f"""else: \n"""
 				r_tail += f"""    {self.result_var} = [] \n"""
 		else:
-			r_tail += f"""for r_tuple in result_tuple:\n"""
+			r_tail += f"""for r_tuple in result_tuple['{self.result_var}']:\n"""
 			if self.current_tok.value == '{':
 				tmp = '{}'
 				r_head += f"""{self.result_var} = {tmp}\n"""
@@ -560,8 +588,10 @@ class CreateBodyParser:
 
 	def gen_clause(self):
 		tmp_var_loop_set = set()
-		self.r_tuple = ''
-		self.for_loop_list = [(0, """result_tuple = []""")]
+		self.r_tuple = {}
+		self.for_loop_list = [(0, """result_tuple = {}""")]
+		for r, v_list in self.result_value_list.items():
+			self.for_loop_list.append((0, f"""result_tuple['{r}'] = []"""))
 		curr_assign_list = [i for i in range(len(self.assign_list))]
 		curr_cond_list = [i for i in range(len(self.where_list))]
 		offset = 0
@@ -624,8 +654,9 @@ class CreateBodyParser:
 						if str_in(' from ', self.assign_list[i]):
 							va, _ = split(self.assign_list[i], ' from ')
 							vu = va
-							if va in self.result_value_list:
-								self.r_tuple += f"""'{va}':{va},"""
+							for r, v_list in self.result_value_list.items():
+								if va in v_list:
+									self.r_tuple[r] = self.r_tuple.setdefault(r, '') + f"""'{va}':{va},"""
 						continue
 					tmp_collect = False
 					vu, va = list_strip(split(self.assign_list[i], ' as '))
@@ -636,8 +667,9 @@ class CreateBodyParser:
 							c_vu = c_vu.split(',')
 							for c_v in c_vu:
 								c_v = c_v.strip()
-								if c_v not in self.value_list and c_v in self.result_value_list:
-									self.r_tuple +=f"""'{c_v}':{c_v},"""
+								for r, v_list in self.result_value_list.items():
+									if c_v not in self.value_list and c_v in v_list:
+										self.r_tuple[r] = self.r_tuple.setdefault(r, '') + f"""'{c_v}':{c_v},"""
 						vu = vu.strip()
 						if str_in(' where ', vu):
 							vu, vu_if = split(vu, ' where ')
@@ -670,18 +702,20 @@ class CreateBodyParser:
 							tmp = '{%s_group_by_str}'%va
 						else:
 							tmp = '"{%s_group_by_str}"'%va
-						if va in self.result_value_list:
-							if self.var_agg_map[va]['op'] in ['collect set', 'collect list']:
-								self.r_tuple +=f"""'{va}':f'{va}.get({tmp}, [])',"""
-							else:
-								self.r_tuple +=f"""'{va}':f'{va}.get({tmp}, 0)',"""
+						for r, v_list in self.result_value_list.items():
+							if va in v_list:
+								if self.var_agg_map[va]['op'] in ['collect set', 'collect list']:
+									self.r_tuple[r] = self.r_tuple.setdefault(r, '') + f"""'{va}':f'{va}.get({tmp}, [])',"""
+								else:
+									self.r_tuple[r] = self.r_tuple.setdefault(r, '') + f"""'{va}':f'{va}.get({tmp}, 0)',"""
 					else:
 						if vu_if:
 							self.for_loop_list.append((offset, f"""if {vu_if}:"""))
 							offset += 4
 						self.for_loop_list.append((offset, f"""{va} = {vu}"""))
-						if va in self.result_value_list:
-							self.r_tuple +=f"""'{va}':{va},"""
+						for r, v_list in self.result_value_list.items():
+							if va in v_list:
+								self.r_tuple[r] = self.r_tuple.setdefault(r, '') + f"""'{va}':{va},"""
 					tmp_var_loop_set.add(va)
 
 					_check_group_by_repeat(va, tmp_var_loop_set, offset)
@@ -717,15 +751,16 @@ class CreateBodyParser:
 					else:
 						self.for_loop_list.append((offset, f'for {v_key} in {v_value}.keys() if isinstance({v_value}, dict) else range(len({v_value})):'))
 						offset += 4
-					if v_key in self.result_value_list:
-							self.r_tuple +=f"""'{v_key}':{v_key},"""
+					for r, v_list in self.result_value_list.items():
+						if v_key in v_list:
+								self.r_tuple[r] = self.r_tuple.setdefault(r, '') + f"""'{v_key}':{v_key},"""
 					tmp_var_loop_set.add(v_key)
 
 					curr_assign_list, curr_cond_list, offset = _put_assignment_clause(curr_assign_list, curr_cond_list, offset)
-
-		self.r_tuple = self.r_tuple.strip(',')
-		self.for_loop_list.append((offset, 'if {'+self.r_tuple+'} not in result_tuple:'))
-		self.for_loop_list.append((offset+4, 'result_tuple.append({'+self.r_tuple+'})'))
+		for r, v in self.r_tuple.items():
+			self.r_tuple[r] = self.r_tuple[r].strip(',')
+			self.for_loop_list.append((offset, 'if {'+self.r_tuple[r]+'} not in' + f" result_tuple['{r}']:"))
+			self.for_loop_list.append((offset+4, f"result_tuple['{r}']"+'.append({'+self.r_tuple[r]+'})'))
 		print("self.for_loop_list:", self.for_loop_list)
 
 		return self.for_loop_list
@@ -907,10 +942,13 @@ def FromPaser(fn, text):
 
 def ToPaser(fn, text):
 	text = strip_prefix(text, ['write'])
-	f, d = split(text, ' from ')
-	f = f.strip()
-	d = d.strip()
-	r = f'write_json_file("{f}", {d});'
+	text_list = text.split(',')
+	r = ''
+	for text_t in text_list:
+		f, d = split(text_t, ' from ')
+		f = f.strip()
+		d = d.strip()
+		r += f'\nwrite_json_file("{f}", {d});'
 	return r
 
 def CreatePaser(fn, text):
@@ -922,48 +960,61 @@ def CreatePaser(fn, text):
 	boundary = ['create', 'select', 'var']
 	query_list = parser_get_query_list(text, boundary)
 
-	create_text = text
 	result_var = ''
 	var_list = []
 	body_text = ''
-
+	create_list = {}
 	for q in query_list:
 		if q.lower().startswith('create'):
-			create_text, result_var = list_strip(parser_get_query_list(q, ['as']))
-			create_text = create_text[len('create '):]
-			result_var = result_var[len('as '):]
+			create_text = q[len('create '):]
+			tmp_create_list = create_text.split(';')
+			for c in tmp_create_list:
+				create_text, result_var = list_strip(parser_get_query_list(c, ['as']))
+				result_var = result_var[len('as '):]
+				create_list[result_var] = create_text
 		if q.lower().startswith('select'):
 			body_text = q
 		if q.lower().startswith('var'):
 			var_list = list_strip(q[len('var'):].split(','))
 
-	lexer = ResultLexer(fn, create_text)
-	tokens = lexer.make_tokens()
-	parser = CreateResultParser(tokens, {}, '', '')
-	result_value_set = parser.get_result_value_set()
+	result_value = {}
+	for r, create_text in create_list.items():
+		lexer = ResultLexer(fn, create_text)
+		tokens = lexer.make_tokens()
+		parser = CreateResultParser(tokens, {}, '', '')
+		result_value[r] = parser.get_result_value_set()
 
+	body_parser = CreateBodyParser(fn, body_text, var_list, result_value)
+	body_parser.parse()
+	body_loop = body_parser.gen_clause()
 
+	r_code = ''
+	tail_code = ''
 
-	parser = CreateBodyParser(fn, body_text, var_list, result_value_set)
-	parser.parse()
-	body_loop = parser.gen_clause()
+	header_flag = True
 
-	lexer = ResultLexer(fn, create_text)
-	tokens = lexer.make_tokens()
-	parser = CreateResultParser(tokens, parser.var_agg_map, parser.order_text, result_var)
-	header_start, header_tail = parser.parse()
+	for r, create_text in create_list.items():
+		lexer = ResultLexer(fn, create_text)
+		tokens = lexer.make_tokens()
+		parser = CreateResultParser(tokens, body_parser.var_agg_map, body_parser.order_text, r)
+		if header_flag:
+			r_code = parser.preparse()
+			header_flag = False
+		header_start, header_tail = parser.parse()
 
-	r_code = header_start
+		r_code += header_start
+
+		for tail in header_tail:
+			if tail.startswith('update '):
+				unit_r, _ = UpdatePaser(fn, tail)
+				tail_code += unit_r
+			else:
+				tail_code += tail
+
 	for l in body_loop:
 		r_code += ' ' * l[0] + f'{l[1]}\n'
 
-	for tail in header_tail:
-		if tail.startswith('update '):
-			unit_r, _ = UpdatePaser(fn, tail)
-			r_code += unit_r
-		else:
-			r_code += tail
-	return r_code,result_var
+	return r_code+tail_code, result_var
 
 def UpdatePaser(fn, text):
 	text = text.strip()
@@ -1145,3 +1196,10 @@ def main():
 
 if __name__=="__main__":
     main()
+
+
+# kiwi("""read ../sample_data/zeek/conn.json as flows
+# 
+# write ../sample_data/result/top_sender_dport.json from r1, 
+	#   ../sample_data/result/top_sender_dhost.json from r2
+# """)

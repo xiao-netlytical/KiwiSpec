@@ -223,6 +223,7 @@ class CreateResultParser:
 		self.agg_min_expr = set()
 		self.agg_max_expr = set()
 		self.agg_count_distinct = set()
+		
 		r_tail = ''
 		r_head = ''
 		if self.order_text != '':
@@ -281,11 +282,11 @@ class CreateResultParser:
 			if self.current_tok.value == '{':
 				tmp = '{}'
 				r_head += f"""{self.result_var} = {tmp}\n"""
-				r_tail += "    " + self.parse_result_dict(self.result_var)
+				r_tail += "    " + self.parse_result_dict(self.result_var)+"\n"
 
 			if self.current_tok.value == '[':
 				r_head += f"""{self.result_var} = []\n"""
-				r_tail += "    " + self.parse_result_list(self.result_var)
+				r_tail += "    " + self.parse_result_list(self.result_var)+"\n"
 		return r_head, r_tail
 
 	def get_result_value_set(self): 
@@ -1197,9 +1198,8 @@ def main():
 if __name__=="__main__":
     main()
 
-
 # kiwi("""read ../sample_data/zeek/conn.json as flows
-# 
-# write ../sample_data/result/top_sender_dport.json from r1, 
-	#   ../sample_data/result/top_sender_dhost.json from r2
+# kiwi("""
+# read ../sample_data/zeek/conn.json as flows, ../rules/application_rule.json as application
+# write ../sample_data/result/ip_to_servers.json from r
 # """)

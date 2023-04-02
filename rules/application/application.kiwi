@@ -3,19 +3,16 @@ define read_path=../sample_data/zeek, write_path=../sample_data/result, app_defi
 
 # identify application server and build ip address to application name binding
 read read_path/conn.json as flows, app_define/application_rule.json as application
-create {ip1:out_port} as r_src 
+create {ip1:out_port} as r_src; {ip2:in_port} as r_dst 
 var i select
     flows[i]["id.orig_h"] as ip1;
-    collect set(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) group by ip1 as out_port
-
-create {ip2:in_port}  as r_dst 
-var i select
+    collect set(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) group by ip1 as out_port;
     flows[i]["id.resp_h"] as ip2;
     collect set(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) group by ip2 as in_port
 
-create {ip:apps} as r var ip, k
-select 
-r_dst[ip] as out_port; 
+create {ip:apps} as r 
+var ip, k select 
+    r_dst[ip] as out_port; 
     r_src.get(ip, []) as in_port; 
     collect list(application[k]["app_name"]) group by ip as apps;
 where 
@@ -25,13 +22,10 @@ write write_path/ip_to_servers.json from r
 
 # identify application server and build application name to ip addresses binding
 read read_path/conn.json as flows, app_define/application_rule.json as application
-create {ip1:out_port} as r_src 
+create {ip1:out_port} as r_src;  {ip2:in_port}  as r_dst
 var i select
     flows[i]["id.orig_h"] as ip1;
-    collect set(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) group by ip1 as out_port
-
-create {ip2:in_port}  as r_dst  
-var i select
+    collect set(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) group by ip1 as out_port;
     flows[i]["id.resp_h"] as ip2;
     collect set(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) group by ip2 as in_port
 

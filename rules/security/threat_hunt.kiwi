@@ -5,11 +5,11 @@ define read_path=../sample_data/zeek/conn.json, read_dns_path=../sample_data/zee
 read read_path as flows
 CREATE [{"source": source, "dport":dport, "dhost": dhost}] as r
 VAR i SELECT
-flows[i]["id.orig_h"] as source;
-flows[i]["id.orig_h"] as source;
-COLLECT SET(flows[i]["id.resp_h"]) as  dhost;
-COLLECT SET(flows[i]["id.resp_p"]) as  dport;
-where flows[i].get("local_orig", True) and flows[i].get("local_resp", True);    
+    flows[i]["id.orig_h"] as source;
+    flows[i]["id.orig_h"] as source;
+    COLLECT SET(flows[i]["id.resp_h"]) as  dhost;
+    COLLECT SET(flows[i]["id.resp_p"]) as  dport;
+    where flows[i].get("local_orig", True) and flows[i].get("local_resp", True);    
     flows[i]["conn_state"] in ["S0", "REJ"]
 write write_path/top_sender.json from r
 
@@ -18,14 +18,14 @@ read read_path as flows
 CREATE [{"source": source, "dport":dport, "dport_c":dport_c}] AS r1 ;
        [{"source": source, "dhost": dhost, "dhost_c": dhost_c}] AS r2  
 VAR i SELECT
-flows[i]["id.orig_h"] as source;
-COLLECT SET(flows[i]["id.resp_h"]) as dhost;
-COLLECT SET(flows[i]["id.resp_p"]) as dport;
-COUNT DISTINCT(flows[i]["id.resp_h"]) as dhost_c;
-COUNT DISTINCT(flows[i]["id.resp_p"]) as dport_c;
-where flows[i].get("local_orig", True) and flows[i].get("local_resp", True);    
+    flows[i]["id.orig_h"] as source;
+    COLLECT SET(flows[i]["id.resp_h"]) as dhost;
+    COLLECT SET(flows[i]["id.resp_p"]) as dport;
+    COUNT DISTINCT(flows[i]["id.resp_h"]) as dhost_c;
+    COUNT DISTINCT(flows[i]["id.resp_p"]) as dport_c;
+    where flows[i].get("local_orig", True) and flows[i].get("local_resp", True);    
     flows[i]["conn_state"] in ["S0", "REJ"];
-ORDER BY dhost_c DESC LIMIT 10 FOR r2;  dport_c DESC LIMIT 10 FOR r1
+    ORDER BY dhost_c DESC LIMIT 10 FOR r2;  dport_c DESC LIMIT 10 FOR r1
 write write_path/top_sender_dport.json from r1, 
 	  write_path/top_sender_dhost.json from r2
 
@@ -50,7 +50,7 @@ VAR i SELECT
     flows[i]["id.resp_h"] AS d_ip;
     sum(flows[i].get("orig_pkts", 0)) as orig_pkts;
     sum(flows[i].get("orig_bytes", 0)) as orig_bytes;
-ORDER BY orig_pkts DESC LIMIT 10 FOR r1;  orig_bytes DESC LIMIT 10 FOR r2
+    ORDER BY orig_pkts DESC LIMIT 10 FOR r1;  orig_bytes DESC LIMIT 10 FOR r2
 write write_path/top_bytes_sender.json from r2, 
 	  write_path/top_pkts_sender.json from r1
 
@@ -63,13 +63,6 @@ var i  select
     int(epoch_time(flows[i]["ts"])) as window_start;
     count distinct(window_start) group by s_ip,d_ip as window_ct;
     order by window_ct DESC LIMIT 100
-
-create [{"src":src, "dst":dst, "intervals": window_ct}] as r
-var i  select 
-    r0[i]["src"] as src;
-    r0[i]["dst"] as dst;
-    r0[i]["intervals"] as window_ct;
-    where window_ct >= 1
 write write_path/top_consistent_interval.json from r
 
 # DNS - As channel

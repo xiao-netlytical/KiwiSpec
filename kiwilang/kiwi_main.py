@@ -970,8 +970,7 @@ def CreatePaser(fn, text):
 			create_text = q[len('create '):]
 			tmp_create_list = create_text.split(';')
 			for c in tmp_create_list:
-				create_text, result_var = list_strip(parser_get_query_list(c, ['as']))
-				result_var = result_var[len('as '):]
+				create_text, result_var = list_strip(split(c, ' as '))
 				create_list[result_var] = create_text
 		if q.lower().startswith('select'):
 			body_text = q
@@ -1198,8 +1197,5 @@ def main():
 if __name__=="__main__":
     main()
 
-# kiwi("""read ../sample_data/zeek/conn.json as flows
-# kiwi("""
-# read ../sample_data/zeek/conn.json as flows, ../rules/application_rule.json as application
-# write ../sample_data/result/ip_to_servers.json from r
-# """)
+# kiwi("""read ../sample_data/zeek/dns.json as flows
+# write ../sample_data/result/dns_domain_requests.json from r""")

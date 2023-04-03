@@ -1,6 +1,4 @@
-def count_one(i):
-    return 1
-    
+
 def write_json_file(file_name, data):
     import json
     json_data = json.dumps(data, indent=4)

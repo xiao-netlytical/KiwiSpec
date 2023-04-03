@@ -58,7 +58,7 @@ var i set
 
 var i select
     a[i] as value
-    sum(count_one(a[i])) group by value as ct
+    count distinct(i) group by value as ct
 with {value:ct} as tmp
 
 creat r as result

@@ -1,43 +1,13 @@
 
 define read_path=../sample_data/zeek, write_path=../sample_data/result
 
-#Discovery-Network Service Scanning
-read read_path/conn.json as flows
-CREATE [{"source": source, "dport":dport, "dhost": dhost}] as r
-VAR i SELECT
-flows[i]["id.orig_h"] as source;
-flows[i]["id.orig_h"] as source;
-COLLECT SET(flows[i]["id.resp_h"]) as  dhost;
-COLLECT SET(flows[i]["id.resp_p"]) as  dport;
-where flows[i].get("local_orig", True) and flows[i].get("local_resp", True);    
-    flows[i]["conn_state"] in ["S0", "REJ"]
-write write_path/top_sender.json from r
-
-#Discovery-Network Service Scanning, sort by dport for r1 and dhost for r2, and limited to 10
-read read_path/conn.json as flows
-CREATE [{"source": source, "dport":dport, "dport_c":dport_c}] AS r1 ;
-       [{"source": source, "dhost": dhost, "dhost_c": dhost_c}] AS r2  
-VAR i SELECT
-flows[i]["id.orig_h"] as source;
-COLLECT SET(flows[i]["id.resp_h"]) as dhost;
-COLLECT SET(flows[i]["id.resp_p"]) as dport;
-COUNT DISTINCT(flows[i]["id.resp_h"]) as dhost_c;
-COUNT DISTINCT(flows[i]["id.resp_p"]) as dport_c;
-where flows[i].get("local_orig", True) and flows[i].get("local_resp", True);    
-    flows[i]["conn_state"] in ["S0", "REJ"];
-ORDER BY dhost_c DESC LIMIT 10 FOR r2;  dport_c DESC LIMIT 10 FOR r1
-write write_path/top_sender_dport.json from r1, 
-	  write_path/top_sender_dhost.json from r2
-
-
-
 #DNS request for each source address in five minute window ordered by request count
 read read_path/conn.json as flows
 create {window_start: [{dns_src: dns_requests}]}  as r
 var i  select
     flows[i]["id.orig_h"] as dns_src;
     int(epoch_time(flows[i]["ts"])/300) as window_start;
-    sum(count_one(i)) as dns_requests;
+    count distinct(i) as dns_requests;
     where flows[i]["id.resp_p"] == 53;
     order by dns_requests
 write write_path/top_dns_sender.json from r
@@ -48,7 +18,7 @@ create {window_start: {dns_src: cnt}}  as r
 var i,j select
     flows[i]["id.orig_h"] as dns_src;
     int(epoch_time(flows[i]["ts"])/60) as window_start;
-    sum(count_one(j)) group by dns_src, window_start as cnt;
+    count distinct(j) group by dns_src, window_start as cnt;
 where flows[j]["id.resp_p"] == 53; flows[j]["id.orig_h"] == dns_src;
 int(epoch_time(flows[j]["ts"])/60) >= window_start and int(epoch_time(flows[j]["ts"])/60) < window_start + 5
 write write_path/5_min_dns_request.json from r

@@ -48,7 +48,8 @@ VAR i SELECT
     flows[i]["id.orig_h"] AS s_ip;
     flows[i]["id.resp_h"] AS d_ip;
     SUM(flows[i]["orig_pkts"]) AS o_pkts;
-    SUM(flows[i]["resp_pkts"]) AS r_pkts; SUM(1) AS ct;
+    SUM(flows[i]["resp_pkts"]) AS r_pkts; 
+    count distinct(i) AS ct;
     COLLECT SET(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) AS proto
 WRITE write_path/traffic_agg.json FROM r
 

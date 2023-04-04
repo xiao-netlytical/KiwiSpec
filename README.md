@@ -40,7 +40,7 @@ You can find the files containing collections of rules under the directory "rule
 
 ## 3. Security Rules in KiwiLang
 
-The security rules are designed to identify potential security threats or suspicious activity from the logs. Currently, there are two example rules available for identifying top requests and top DNS requests during each interval, based on the conn.log data collected by Zeek. These rules can be found in the 'rules/security' directory.
+The security rules aim to detect potential security threats or suspicious activities. The set of threat hunting rules in the file rules/security/thread_hunt.kiwi are designed to identify the top workloads with the most outbound connections, the longest connections, the largest packet count and byte count, as well as beaconing and potential DNS C2 channels. These identifications are based on the conn.log data collected by Zeek. Additionally, two example rules are included in the file rules/security/security.kiwi to demonstrate interval-based aggregation by identifying the top DNS requests during each interval. 
 
 ## 4. Interview Question Coding in KiwiLang (For Fun Experiment)
 

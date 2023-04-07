@@ -90,4 +90,4 @@ Our plans for the future include:
 
 
 
-## If there are any inquiries, please contact me at xiao.netlytical@google.com
+## If there are any inquiries, please contact me at xiao.netlytical@gmail.com

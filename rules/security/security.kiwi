@@ -30,7 +30,7 @@ create [{"ip":s_ip, "pkts": pkts, "bytes":bytes, "relationship":relationship}] a
 var i select
     flows[i]["id.orig_h"] as s_ip;
     count distinct(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) as relationship;
-    sum(flows[i].get("orig_pkts", 0) + flows[i].get("resp_pkts", 0)) as pkts;
-    sum(flows[i].get("orig_bytes", 0) + flows[i].get("resp_bytes", 0)) as bytes;
+    sum(flows[i]["orig_pkts" | 0] + flows[i]["resp_pkts" | 0]) as pkts;
+    sum(flows[i]["orig_bytes" | 0] + flows[i]["resp_bytes" | 0]) as bytes;
 order by relationship desc
 write write_path/top_out_rel.json from r

@@ -1,7 +1,9 @@
 
-define read_path=../sample_data/zeek/conn.json, read_dns_path=../sample_data/zeek/dns.json, write_path=../sample_data/result
+define read_path=../sample_data/zeek/conn.json, 
+read_dns_path=../sample_data/zeek/dns.json, 
+write_path=../sample_data/result
 
-#Discovery-Network Service Scanning
+#Discovery-Network Service Scanning 
 read read_path as flows
 CREATE [{"source": source, "dport":dport, "dhost": dhost}] as r
 VAR i SELECT
@@ -9,11 +11,11 @@ VAR i SELECT
     flows[i]["id.orig_h"] as source;
     COLLECT SET(flows[i]["id.resp_h"]) as  dhost;
     COLLECT SET(flows[i]["id.resp_p"]) as  dport;
-    where flows[i].get("local_orig", True) and flows[i].get("local_resp", True);    
+    where flows[i]["local_orig" | True] and flows[i]["local_resp" | True];    
     flows[i]["conn_state"] in ["S0", "REJ"]
 write write_path/top_sender.json from r
 
-#Discovery-Network Service Scanning, sort by dport for r1 and dhost for r2, and limited to 10
+#Discovery-Network Service Scanning, sort by dport for r1 and dhost for r2, and limited to 10 
 read read_path as flows
 CREATE [{"source": source, "dport":dport, "dport_c":dport_c}] AS r1 ;
        [{"source": source, "dhost": dhost, "dhost_c": dhost_c}] AS r2  
@@ -23,34 +25,43 @@ VAR i SELECT
     COLLECT SET(flows[i]["id.resp_p"]) as dport;
     COUNT DISTINCT(flows[i]["id.resp_h"]) as dhost_c;
     COUNT DISTINCT(flows[i]["id.resp_p"]) as dport_c;
-    where flows[i].get("local_orig", True) and flows[i].get("local_resp", True);    
+    where flows[i]["local_orig" | True] and flows[i]["local_resp" | True];    
     flows[i]["conn_state"] in ["S0", "REJ"];
     ORDER BY dhost_c DESC LIMIT 10 FOR r2;  dport_c DESC LIMIT 10 FOR r1
 write write_path/top_sender_dport.json from r1, 
 	  write_path/top_sender_dhost.json from r2
 
 #longest connection, or concatenated connections limit 100
-READ read_path AS flows
+READ read_path AS flows, 
+write_path/ip_to_servers.json as srv_names
 CREATE [{"src":s_ip, "dst":d_ip, "srv":proto, "flows": ct, "duration":dur}] AS r
 VAR i SELECT
     flows[i]["id.orig_h"] AS s_ip;
     flows[i]["id.resp_h"] AS d_ip;
     flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"]) AS proto;
     count distinct(i) AS ct;
-    SUM(flows[i].get("duration", 0)) AS dur;
+    SUM(flows[i]["duration" | 0]) AS dur;
     ORDER BY dur DESC LIMIT 100
+update r var i set
+    r[i]["server"] as srv_names[r[i]["src"] | []]
 WRITE write_path/top_duration.json from r
 
 #Extrafiltration, top sending bytes in total and top sending count, sorted and limited to 10
-read read_path as flows
+read read_path as flows, write_path/ip_to_servers.json as srv_names
 CREATE [{"src":s_ip, "dst":d_ip, "orig_pkts": orig_pkts}] AS r1 ;
        [{"src":s_ip, "dst":d_ip, "orig_bytes": orig_bytes}] AS r2  
 VAR i SELECT
     flows[i]["id.orig_h"] AS s_ip;
     flows[i]["id.resp_h"] AS d_ip;
-    sum(flows[i].get("orig_pkts", 0)) as orig_pkts;
-    sum(flows[i].get("orig_bytes", 0)) as orig_bytes;
+    sum(flows[i]["orig_pkts" | 0]) as orig_pkts;
+    sum(flows[i]["orig_bytes" | 0]) as orig_bytes;
     ORDER BY orig_pkts DESC LIMIT 10 FOR r1;  orig_bytes DESC LIMIT 10 FOR r2
+update var i set
+    r1[i]["server"] as srv_names[r1[i]["src"] | []]
+
+update var i set
+    r2[i]["server"] as srv_names[r2[i]["src"] | []]
+
 write write_path/top_bytes_sender.json from r2, 
 	  write_path/top_pkts_sender.json from r1
 
@@ -66,12 +77,15 @@ var i  select
 write write_path/top_consistent_interval.json from r
 
 # DNS - As channel
-read read_dns_path as flows
+read read_dns_path as flows, 
+write_path/ip_to_servers.json as srv_names
 create [{"src":s_ip, "base_domain":domain, "requests": ct}] as r
 var i  select 
     flows[i]["id.orig_h"] as s_ip;
     ".".join(flows[i]["query"].split(".")[-2:]) as domain;
     count distinct(i) GROUP BY s_ip,domain AS ct;
     order by ct DESC
+update r var i set
+    r[i]["server"] as srv_names[r[i]["src"] | []]
  write write_path/dns_domain_requests.json from r   
 

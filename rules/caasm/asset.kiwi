@@ -102,8 +102,8 @@ WRITE write_path/server_acc_servers.json FROM r
 # update server_to_server_traffic.json table with IPs associated with the applicaiton
 READ write_path/server_to_server_traffic.json AS srv_rel, write_path/server_to_ips.json AS srv_ips
 UPDATE srv_rel VAR i set
-    srv_rel[i]["s_ips"] AS srv_ips.get(srv_rel[i]["s_srv"], []);
-    srv_rel[i]["d_ips"] AS srv_ips.get(srv_rel[i]["d_srv"], [])
+    srv_rel[i]["s_ips"] AS srv_ips[srv_rel[i]["s_srv"] | []];
+    srv_rel[i]["d_ips"] AS srv_ips[srv_rel[i]["d_srv"] | []]
 WRITE write_path/server_acc_server_with_ips.json FROM srv_rel
 
 

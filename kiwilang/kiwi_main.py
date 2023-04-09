@@ -343,7 +343,7 @@ class BodyLexer:
 	def make_tokens(self):
 		tokens = []
 		while self.current_char != None:
-			if self.current_char in ' \t\n':
+			if self.current_char in '\t\n':
 				self.advance()
 			elif self.current_char in '[]':
 				tokens.append(Token("TOKEN", self.current_char))
@@ -360,7 +360,7 @@ class BodyLexer:
 			self.advance()
 
 		tok_type = 'EXPR'
-		return Token(tok_type, id_str.strip())
+		return Token(tok_type, id_str)
 
 def get_var_access(tokens, var_list, value_list):
 	tmp_s = ''
@@ -413,6 +413,33 @@ def get_unit_access(tokens, var_list, value_list):
 				map_flag = True
 
 	return i_depend, access_map if map_flag else []
+
+def fix_default_format(assign_a):
+#a[x|y] a[b[x|y]] a[i][j][x|y] a[i|k][j][x|y] a[b[x|y]|z] a[b[x]|c[y]]
+#a[b[x]|c[y]] | a[b[x|y]|c[z]] | a[b[x]|c[y|z]]
+	lexer = BodyLexer(None, assign_a)
+	tokens = lexer.make_tokens()
+
+	s_curr = ''
+	s_stack = []
+	for token in tokens:
+		i = token.value
+		if i == '[':
+			if s_curr:
+				s_stack.append(s_curr)
+				s_curr = i
+		elif i == ']':
+			s_curr += i
+			if '|' in s_curr:
+				x,y = s_curr[1:-1].split('|')
+				s_curr = f'.get({x}, {y})'
+
+			if s_stack:
+				pre_s = s_stack.pop()
+				s_curr = pre_s+s_curr
+		else:
+			s_curr += i
+	return s_curr
 
 def check_access_map(access_map_list, check_str):
 	match_str_list = []
@@ -476,7 +503,8 @@ class CreateBodyParser:
 		self.var_agg_map = {}
 		self.value_depend = {}
 
-
+		self.assign_list = [fix_default_format(i) for i in self.assign_list]
+		self.where_list = [fix_default_format(i) for i in self.where_list]
 
 		def _add_var_depend(new_dep):
 			for i in self.var_depend:
@@ -800,6 +828,8 @@ class UpdateBodyParser:
 		self.cond_depend = []
 		self.var_depend = []
 
+		self.assign_list = [fix_default_format(i) for i in self.assign_list]
+		self.where_list = [fix_default_format(i) for i in self.where_list]
 
 		def _add_var_depend(new_dep):
 			for i in self.var_depend:
@@ -1127,7 +1157,8 @@ def cli():
 def kiwi(text):
 	result, result_v = QueryParser(None, text)
 	exec(result, globals())
-	return globals()[result_v]
+	if result_v:
+		return globals()[result_v]
 
 
 def startswith_list(s, l):
@@ -1147,8 +1178,10 @@ def main():
 		return ''
 	
 	def _pass_define(line):
-		define_list = line.strip()[len('define'):].split(',')
+		define_list = list_strip(line.split(','))
 		for d in define_list:
+			if not d:
+				continue
 			k, v = d.strip().split('=')
 			path_define[k.strip()] = v.strip()
 	
@@ -1162,22 +1195,52 @@ def main():
 	try:
 		with open(filename, 'r') as file:
 			command_buffer = ''
+			line_buffer = []
 			pre_start = ''
+
+			mini_buff = []
+
 			for line in file:
 				if line.strip().startswith('#'):
 					continue
+				start = _startswith_list(line, ['read ', 'define ', 'write ', 'create '])
+				if start:
+					if mini_buff:
+						mini_buff_start  = _startswith_list(mini_buff[0], ['read ', 'define ', 'write '])
+						if mini_buff_start == 'define ':
+							for l in mini_buff:
+								if l.strip().startswith('define '):
+									l = l.strip()[len('define '):]
+								_pass_define(l)
+						elif mini_buff_start in ['read ', 'write ']:
+							for l in mini_buff:
+								for k,v in path_define.items():
+									l = l.replace(k, v)		
+								line_buffer.append(l)
+						else:
+							line_buffer += mini_buff 
+						mini_buff = []	
+				mini_buff.append(line)
 
-				if line.strip().lower().startswith('define'):
-					_pass_define(line)
-					continue
+			if mini_buff:
+				mini_buff_start  = _startswith_list(mini_buff[0], ['read ', 'write '])
+				if mini_buff_start == 'define ':
+					for l in mini_buff:
+						if l.strip().startswith('define '):
+							l = l.strip()[len('define '):]
+						_pass_define(l)
+				elif mini_buff_start in ['read ', 'write ']:
+					for l in mini_buff:
+						for k,v in path_define.items():
+							l = l.replace(k, v)		
+						line_buffer.append(l)
+				else:
+					line_buffer += mini_buff 
 
-				start = _startswith_list(line, ['read', 'create', 'write'])
-				if start == 'read' or start == 'write':
-					for k,v in path_define.items():
-						line = line.replace(k, v)
-
-				start = _startswith_list(line, ['read', 'create'])
-				if command_buffer.strip() != '' and (start =='read' or start=='create' and  pre_start != 'read'):
+			for line in line_buffer:
+				print(line)
+				start = _startswith_list(line, ['read ', 'create '])
+				if command_buffer.strip() != '' and (start =='read ' or start=='create ' and  pre_start != 'read '):
 					kiwi(command_buffer)
 					command_buffer = ''
 
@@ -1196,6 +1259,3 @@ def main():
 
 if __name__=="__main__":
     main()
-
-# kiwi("""read ../sample_data/zeek/dns.json as flows
-# write ../sample_data/result/dns_domain_requests.json from r""")

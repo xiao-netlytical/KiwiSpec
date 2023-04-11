@@ -362,57 +362,57 @@ class BodyLexer:
 		tok_type = 'EXPR'
 		return Token(tok_type, id_str)
 
-def get_var_access(tokens, var_list, value_list):
-	tmp_s = ''
-	tmp_c = 0
+def get_access_maps(tokens, var_list, value_list):
 	i_depend = set()
 	var_depend = []
+	s_curr = ''
+	s_stack = []
+	var_flag = False
 	var_map = {}
+	access_map = []
+
 	for token in tokens:
 		i = token.value
 		if i == '[':
-			tmp_c += 1
+			if s_curr:
+				s_stack.append((s_curr, var_flag))
+			var_flag = False
+			s_curr = i
 		elif i == ']':
-			tmp_c -= 1
-		if i in var_list:
-			if tmp_c == 1:
-				var_map[i] = tmp_s.strip('[')
-			var_depend.append(i)
-			i_depend.add(i)
-		if i in value_list:
-			i_depend.add(i)
-		tmp_s += i
-	return i_depend, var_depend, var_map
+			s_curr += i
+			pre_str = ''
+			pre_i = ('', False)
+			if s_stack:
+				pre_i = s_stack.pop()
+				pre_str = pre_i[0].strip('[')
 
+			curr_v = s_curr[1:-1].strip()
+			if curr_v in var_list:
+				var_depend.append(curr_v)
+				i_depend.add(curr_v)
+				var_flag = True
+				var_map[curr_v] = pre_str
+			elif var_flag:
+				if pre_str.lower() != 'range':
+					access_map.append([pre_str, curr_v])
+			if curr_v in value_list:
+				i_depend.add(curr_v)
+				var_flag = True
 
-def get_unit_access(tokens, var_list, value_list):
-	tmp_h = tokens[0].value
-	tmp_s = ''
-	tmp_c = 0
-	i_depend = set()
-	access_map = []
-	map_flag = False
+			s_curr = pre_i[0]+s_curr
+			var_flag |= pre_i[1]
 
-	if len(tokens) < 3 or tokens[2].value in var_list:
-		return i_depend, access_map
-
-	for token in tokens[1:]:
-		i = token.value
-		if tmp_c > 0:
-			tmp_s += i
-		if i == '[':
-			tmp_c += 1
-		elif i == ']':
-			tmp_c -= 1
-			if tmp_c == 0 and tmp_h != 'range':
-				access_map = [tmp_h, tmp_s[0:-1]]
-				break
 		else:
-			if i in value_list or i in var_list:
-				i_depend.add(i)
-				map_flag = True
+			s_curr += i
+	
+	if s_curr in var_list:
+		var_depend.append(s_curr)
+		i_depend.add(s_curr)
 
-	return i_depend, access_map if map_flag else []
+	if s_curr in value_list:
+		i_depend.add(s_curr)
+
+	return i_depend, var_depend, var_map, access_map
 
 def fix_default_format(assign_a):
 #a[x|y] a[b[x|y]] a[i][j][x|y] a[i|k][j][x|y] a[b[x|y]|z] a[b[x]|c[y]]
@@ -524,27 +524,24 @@ class CreateBodyParser:
 			for i in range(len(self.value_list)):
 				self.value_depend[self.value_list[i]] = self.assign_depend[i]
 
-		def _get_depend_all(exprs, depend_list, group_by_var=set()):
+		def _get_all_maps(exprs, depend_list, group_by_var=set()):
 			for expr in exprs:
 				lexer = BodyLexer(self.fn, expr)
 				tokens = lexer.make_tokens()
 
-				for i in range(len(tokens)):
-					if tokens[i].value in '[]':
-						continue
-					a_depend, var_depend, var_map = get_var_access(tokens[i:], self.var_list, self.value_list)
-					self.map_list.update(var_map)
-					if a_depend:
-						self.depend = self.depend.union(a_depend)
-					if var_depend:
-						_add_var_depend(var_depend)
-					a_depend, access_s_map = get_unit_access(tokens, self.var_list, self.value_list)
-					if a_depend:
-						self.depend = self.depend.union(a_depend)
-					if access_s_map and access_s_map not in self.access_map_list:
-						self.access_map_list.append(access_s_map)
-			depend_list.append(self.depend|group_by_var)
+				a_depend, var_depend, var_map, access_s_map = get_access_maps(tokens, self.var_list, self.value_list)
+				
+				self.map_list.update(var_map)
+				if a_depend:
+					self.depend = self.depend.union(a_depend)
+				if var_depend:
+					_add_var_depend(var_depend)
 
+				for access_map in access_s_map:
+					if access_map and access_map not in self.access_map_list:
+						self.access_map_list.append(access_map)
+			
+			depend_list.append(self.depend|group_by_var)
 
 		for assign in self.assign_list:
 			self.depend = set()
@@ -584,7 +581,7 @@ class CreateBodyParser:
 			assign_ex = assign_ex.replace(' where ', ' ').replace(' WHERE ', ' ')
 
 			assign_expr = list_strip(re.split("[+,-,*,/,%,^,!,=,(,),' ',',','{','}']", assign_ex))
-			_get_depend_all(assign_expr, self.assign_depend, group_by_var)
+			_get_all_maps(assign_expr, self.assign_depend, group_by_var)
 
 		print("self.assign_depend:", self.assign_depend)
 		print("self.value_list:", self.value_list)
@@ -603,7 +600,7 @@ class CreateBodyParser:
 
 			cond_expr = list_strip(re.split("[+,-,*,/,%,^,!,==,=,(,),' ',',']", condition))
 
-			_get_depend_all(cond_expr, self.cond_depend)
+			_get_all_maps(cond_expr, self.cond_depend)
 
 		_value_to_depend()
 
@@ -855,16 +852,18 @@ class UpdateBodyParser:
 				for i in range(len(tokens)):
 					if tokens[i].value in '[]':
 						continue
-					a_depend, var_depend, var_map = get_var_access(tokens[i:], self.var_list, [])
+					a_depend, var_depend, var_map, access_s_map = get_access_maps(tokens, self.var_list, [])
+
 					self.map_list.update(var_map)
-					if a_depend and var_depend:
-						depend = depend.union(a_depend)
-						_add_var_depend(var_depend)
-					a_depend, access_s_map = get_unit_access(tokens, self.var_list, [])
 					if a_depend:
 						depend = depend.union(a_depend)
-					if access_s_map and access_s_map not in self.access_map_list:
-						self.access_map_list.append(access_s_map)
+					if var_depend:
+						_add_var_depend(var_depend)
+
+					for access_map in access_s_map:
+						if access_map and access_map not in self.access_map_list:
+							self.access_map_list.append(access_map)
+					
 			self.assign_depend.append(depend)
 
 		print('self.assign_depend:', self.assign_depend)

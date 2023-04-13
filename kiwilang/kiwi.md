@@ -1,25 +1,25 @@
 
-# KiwiLang: A Declarative Approach to Semi-Structured Data Processing
+# KiwiSpec: A Declarative Approach to Semi-Structured Data Processing
 
 xiao-netlytical@google.com
 
 ## Description:
 
-Kiwilang is a project that provides a method for specifying data processing logic in a declarative manner. The solution aims to offer a language and a generic platform for specifying data processing logic in a semi-structured format, managing and executing the specifications in Kiwilang. The interested data processing includes searching and retrieving data with filters, data aggregation, data correlation, data transformation, recursive computation, and trending reports.
+KiwiSpec is a project that provides a method for specifying data processing logic in a declarative manner. The solution aims to offer a language and a generic platform for specifying data processing logic in a semi-structured format, managing and executing the specifications in KiwiSpec. The interested data processing includes searching and retrieving data with filters, data aggregation, data correlation, data transformation, recursive computation, and trending reports.
 
-To build a specification for data processing of semi-structured data, Kiwilang uses expressions with identifiers representing the possible instantiations in a semi-structured data path to access a data value. Additionally, Kiwilang provides operators to create more complex computational expressions with conditional logic and sorting. Together, the declarative language and the specification include constructs to build expressions, specify data input sources, create output templates, and build pipelines.
+To build a specification for data processing of semi-structured data, KiwiSpec uses expressions with identifiers representing the possible instantiations in a semi-structured data path to access a data value. Additionally, KiwiSpec provides operators to create more complex computational expressions with conditional logic and sorting. Together, the declarative language and the specification include constructs to build expressions, specify data input sources, create output templates, and build pipelines.
 
-In addition to the language aspect, the Kiwilang platform also aims to provide a generic platform to manage, translate, and execute specifications, as well as manage and display outputs.
+In addition to the language aspect, the KiwiSpec platform also aims to provide a generic platform to manage, translate, and execute specifications, as well as manage and display outputs.
 
-Furthermore, Kiwilang can also be used as an extension to any imperative language. By embedding the declarative specification for data processing into Python code, the data processing logic can be translated to Python code and executed with the rest of the code.
+Furthermore, KiwiSpec can also be used as an extension to any imperative language. By embedding the declarative specification for data processing into Python code, the data processing logic can be translated to Python code and executed with the rest of the code.
 
 ## Background:
 
-The Kiwilang project was conceived to provide a specification language that can document the data processing logic for applications in areas such as Cyber Asset Attack Surface Management (CAASM), Zero Trust analytics, and threat hunting.
+The KiwiSpec project was conceived to provide a specification language that can document the data processing logic for applications in areas such as Cyber Asset Attack Surface Management (CAASM), Zero Trust analytics, and threat hunting.
 
 In these applications, the processing of log data and metadata is a critical component in the generation of insights. Products developed in these areas provide users with functionalities to identify critical assets, understand the relationships between workloads and application servers, detect violations, and surface risk factors from traffic logs, configurations, installations, and upgrade logs.
 
-Creating such applications requires domain expertise to produce valuable insights from the collected data, and the system needs to be kept updated with new learnings. The Kiwilang project aims to address these needs by providing a language that enables domain experts to document their knowledge and rules easyly, as well as a generic platform capable of managing and interpreting those knowledge and applying them to the collected data.
+Creating such applications requires domain expertise to produce valuable insights from the collected data, and the system needs to be kept updated with new learnings. The KiwiSpec project aims to address these needs by providing a language that enables domain experts to document their knowledge and rules easyly, as well as a generic platform capable of managing and interpreting those knowledge and applying them to the collected data.
 
 The applications in the interested areas have common requirements in terms of data processing. The desired commonality of data processing includes retrieving, searching, filtering, transforming, aggregating, correlating, recursive computing, and trending.
 
@@ -43,7 +43,7 @@ In detail, the data processings can be defined as:
 
 ## Specification and Language:
 
-The Kiwilang project aims to provide domain experts with a declarative language and platform to describe their data processing logic in an easily adoptable, readable, writable, and maintainable manner. The platform is designed to facilitate fast building and turnaround time with new security learnings.
+The KiwiSpec project aims to provide domain experts with a declarative language and platform to describe their data processing logic in an easily adoptable, readable, writable, and maintainable manner. The platform is designed to facilitate fast building and turnaround time with new security learnings.
 
 The declarative specification and language should allow domain experts to:
 
@@ -60,7 +60,7 @@ The declarative specification and language should allow domain experts to:
 . Write specifications that are easy to read and maintain.
 
 
-To enable domain experts to describe their data processing logic in a declarative manner, the language and specification of Kiwilang should provide clear ways to specify the source of input data, data filtering and computation logic, output format, and target output storage. Kiwilang achieves this through five main constructs used to build a declarative specification:
+To enable domain experts to describe their data processing logic in a declarative manner, the language and specification of KiwiSpec should provide clear ways to specify the source of input data, data filtering and computation logic, output format, and target output storage. KiwiSpec achieves this through five main constructs used to build a declarative specification:
 
 • READ: For reading input data from various sources such as memory, file, cloud storage, and/or database.
 
@@ -74,26 +74,26 @@ To enable domain experts to describe their data processing logic in a declarativ
 
 ## Expression and Language:
 
-The fundamental building block of kiwilang is expressions and identifiers. A basic expression is a path expression with identifiers in a semi-structured data path to access a data value. Compositional expressions is introduced to build more complext logic. Compositional expressions can be composed from basic or compositional expressions using operators including COLLECT, COLLECT DISTINCT, GROUP BY, ORDER BY, WHERE, CASE/END, LIMIT, SUM, COUNT, COUNT DISTINCT, MIN, MAX, MEAN, ALL, ANY, LAMBDA and REPEAT. With these operators, expressions can describe the logic of searching with filtering, math and logic computation, aggregation, correlation, transformation and recursive computations.
+The fundamental building block of KiwiSpec is expressions and identifiers. A basic expression is a path expression with identifiers in a semi-structured data path to access a data value. Compositional expressions is introduced to build more complext logic. Compositional expressions can be composed from basic or compositional expressions using operators including COLLECT, COLLECT DISTINCT, GROUP BY, ORDER BY, WHERE, CASE/END, LIMIT, SUM, COUNT, COUNT DISTINCT, MIN, MAX, MEAN, ALL, ANY, LAMBDA and REPEAT. With these operators, expressions can describe the logic of searching with filtering, math and logic computation, aggregation, correlation, transformation and recursive computations.
 By introducing identifiers as placeholders for all the possible instatiations, the declarative language allows users to focus on describing data processing and transformation from input to output, without worrying about walking and manipulating data structures step-by-step.
 
 Expressions can comprise paths accessing data values from multiple data structures. The same identifiers can be used along the path to access values in different levels of the data structures.  An expression accessing a value from one data structure can be used in a path to access another data structure. In these ways, multiple data sources are correlated. The WHERE operator can also be used to correlate multiple data entries or data sources by specifying the relationships between expressions. Different identifiers accessing the same data entry represent different instantiations which can be used to create a correlation between the entries. Relationship definition between entries can be used to build a recursive chain. A lambda operator is used to describe those relationships. An expression built by REPEAT operator with lambda function generates a list of objects along the recursive chain.
 
 An expression calculated as a true or false value with identifier instantiated can serve as a condition expression. An expression can be followed by a condition keyword and a condition expression to form a compositional expression. An expression with an aggregation operator COLLECT, COLLECT DISTINCT, SUM, COUNT, COUNT DISTINCT, ANY, ALL, MIN, MAX, or MEAN forms an aggregation expression. An aggregation expression can be followed with GROUP BY and ORDER BY keyword with an expression or identifier names. Expression build from COLLECT operator or REPEAT operator will generate a set with or without unique values. An aggregation expression generating a set value as a result can be followed by an ORDER BY keyword to define the order of a set. Multiple expressions with condition operators can be grouped together by CASE operator to form a multi-choice expression.
 
-Kiwilang borrows several keywords from SQL, including SELECT, WHERE, AS, GROUP BY, and ORDER BY, because they are widely adopted and self-explanatory. In SQL, the SELECT clause implies table row instantiations as the imperative procedure. In Kiwilang, however, users have more freedom with expressions and identifiers, and the underlying procedures allows any instantiation of identifiers with the calculated expressions. In this way, Kiwilang offers a more flexibility to specify data manipulation, while still drawing upon familiar and widely used keywords.
+KiwiSpec borrows several keywords from SQL, including SELECT, WHERE, AS, GROUP BY, and ORDER BY, because they are widely adopted and self-explanatory. In SQL, the SELECT clause implies table row instantiations as the imperative procedure. In KiwiSpec, however, users have more freedom with expressions and identifiers, and the underlying procedures allows any instantiation of identifiers with the calculated expressions. In this way, KiwiSpec offers a more flexibility to specify data manipulation, while still drawing upon familiar and widely used keywords.
 
-In this example, Kiwilang allows users to specify variables i and j and then select data[i].interest and data[j].interest, where the condition data[i].interest == data[j].interest is met.
+In this example, KiwiSpec allows users to specify variables i and j and then select data[i].interest and data[j].interest, where the condition data[i].interest == data[j].interest is met.
 
     VAR i, j SELECT data[i].interes; data[j].interes; where data[i].interes == data[j].interes
 
-A kiwilang specification is made from the constructs of READ, SELECT, WITH, CREATE, and WRITE.
+A KiwiSpec specification is made from the constructs of READ, SELECT, WITH, CREATE, and WRITE.
 
 Expressions are specified with SELECT clause are assigned a name with AS or FROM keywords. Expression names can be referred by other expressions or output templates. 
 
 Within the SELECT construct, the WHERE, GROUP BY, or ORDER BY clauses can be used as a separate clause to apply the clause to all the expressions globally.
 
-A kiwilang specification can include a READ clause to specify data sources from a file, storage, a data structure name, or a database.
+A KiwiSpec specification can include a READ clause to specify data sources from a file, storage, a data structure name, or a database.
 
 A kewilang specification can include a WITH cluase to pipeline an output of a specification to an input of another specification.
 
@@ -102,9 +102,9 @@ A kewilang specification can include a  WRITE clause to specify an output to a f
 
 ## Output Template, Semantics, and Result Generation:
 
-Kiwilang provides a CREATE construct that allows users to build outputs from expressions. The CREATE construct and clause use templates to define the outputs, which specify how to project the calculated expressions and identifiers as desired by the user. The templates are in semi-structured format and built from expression and identifier names assigned by the SELECT clause. The AS keyword binds an expression to an expression name, while the FROM keyword declares an identifier name for output. All the expressions and identifiers referred to by a template are grouped together to form an expression tuple.
+KiwiSpec provides a CREATE construct that allows users to build outputs from expressions. The CREATE construct and clause use templates to define the outputs, which specify how to project the calculated expressions and identifiers as desired by the user. The templates are in semi-structured format and built from expression and identifier names assigned by the SELECT clause. The AS keyword binds an expression to an expression name, while the FROM keyword declares an identifier name for output. All the expressions and identifiers referred to by a template are grouped together to form an expression tuple.
 
-The algorithm to generate final outputs based on specifications in Kiwilang involves two calculation phases.
+The algorithm to generate final outputs based on specifications in KiwiSpec involves two calculation phases.
 
 The first phase is Identifier Instantiation, Expression Calculation, and Tuple Materialization. 
 
@@ -112,14 +112,14 @@ By instantiating identifiers with valid values, expressions can be materialized.
 
 The second phase of the computation is output projection. The final outputs are defined by one or more templates specified in a CREATE clause. Each template specifies how the output should be projected from the resulting tuple set. Since the resulting tuple includes the collection of referred expressions and identifiers, the template can be populated by each tuple value. The whole output set is generated by appending each population of the template.
 
-An interpreter is implemented to convert a specification to executable code. The translated Python code, for example, will execute the above semantics and algorithm. The Kiwilang interpreter also combines, pipelines, and optimizes the loops with the instantiation and calculation to achieve the best performance.
+An interpreter is implemented to convert a specification to executable code. The translated Python code, for example, will execute the above semantics and algorithm. The KiwiSpec interpreter also combines, pipelines, and optimizes the loops with the instantiation and calculation to achieve the best performance.
 
 As a complete solution, a platform is also under development to manage specifications, data sources, and outputs. The platform will provide an interface for plugging in the specifications and scheduling executions of the specifications.
 
 
 ## Examples:
 
-The following is a list of examples of data processing specifications in the applications of CAASM, risk analysis, and threat hunting. These specifications are written in kiwilang and use JSON format for input and output data structures.
+The following is a list of examples of data processing specifications in the applications of CAASM, risk analysis, and threat hunting. These specifications are written in KiwiSpec and use JSON format for input and output data structures.
 
 The input files are JSON files that are converted from the conn.log generated by Zeek. 
 Each log entry in the conn.log contains the following fields:
@@ -367,7 +367,7 @@ In the specifications above:
 
 ## Conclution:
 
-In conclusion, the Kiwilang project aims to provide a declarative language and platform for specifying data processing logic for semi-structured data. The key technical aspects of Kiwilang can be summarized as follows:
+In conclusion, the KiwiSpec project aims to provide a declarative language and platform for specifying data processing logic for semi-structured data. The key technical aspects of KiwiSpec can be summarized as follows:
 
 1. The language is built on expressions with identifiers in a path to access a semi-structured data value.
 2. Data processing is defined through compositional expressions built on top of basic expressions.
@@ -375,4 +375,4 @@ In conclusion, the Kiwilang project aims to provide a declarative language and p
 4. The semantics of a specification define a set of values of identifiers instantiated with valid values and expressions calculated with the instantiated identifiers.
 5. The final output is generated by populating templates with the calculated expressions.
 
-Overall, Kiwilang will provide a powerful tool for domain experts to easily specify and maintain their data processing logic, enabling the creation of valuable insights from collected data in various areas such as CYBER ASSET ATTACK SURFACE MANAGEMENT (CAASM), Zero Trust analytics, and threat hunting.
+Overall, KiwiSpec will provide a powerful tool for domain experts to easily specify and maintain their data processing logic, enabling the creation of valuable insights from collected data in various areas such as CYBER ASSET ATTACK SURFACE MANAGEMENT (CAASM), Zero Trust analytics, and threat hunting.

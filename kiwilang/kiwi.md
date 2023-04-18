@@ -1,7 +1,7 @@
 
 # KiwiSpec: A Declarative Approach to Semi-Structured Data Processing
 
-xiao-netlytical@google.com
+xiao-netlytical@gmail.com
 
 ## Description:
 

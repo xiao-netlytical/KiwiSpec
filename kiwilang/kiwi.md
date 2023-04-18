@@ -66,15 +66,16 @@ To enable domain experts to describe their data processing logic in a declarativ
 
 • SELECT with condition, sorting, and limiting: For specifying data processing logic. This clause enables users to select and filter data from multiple inputs, transform the data, aggregate and correlate the data, perform recursive computation, and generate trending reports.
 
-• WITH: For pipelining output from a section to input of another section with user-defined data structures.
+• CREATE: For building output data structures. This clause enables users to create data structures that are needed for the output.
 
-• CREATE/UPDATE: For building output data structures. This clause enables users to create or update data structures that are needed for the output.
+• UPDATE: For modifying existing or output data structures. This clause enables users to update data structures that are needed for the output.
 
 • WRITE: For writing output to targets such as memory, file, cloud storage, and/or database.
 
 ## Expression and Language:
 
-The fundamental building block of KiwiSpec is expressions and identifiers. A basic expression is a path expression with identifiers in a semi-structured data path to access a data value. Compositional expressions is introduced to build more complext logic. Compositional expressions can be composed from basic or compositional expressions using operators including COLLECT, COLLECT DISTINCT, GROUP BY, ORDER BY, WHERE, CASE/END, LIMIT, SUM, COUNT, COUNT DISTINCT, MIN, MAX, MEAN, ALL, ANY, LAMBDA and REPEAT. With these operators, expressions can describe the logic of searching with filtering, math and logic computation, aggregation, correlation, transformation and recursive computations.
+The fundamental building block of KiwiSpec is expressions and identifiers. A basic expression is a path expression with identifiers in a semi-structured data path to access a data value. Compositional expressions are introduced to build more complex logic. Compositional expressions can be composed from basic or compositional expressions using operators including COLLECT, COLLECT DISTINCT, GROUP BY, ORDER BY, WHERE, CASE/END, LIMIT, SUM, COUNT, COUNT DISTINCT, MIN, MAX, MEAN, ALL, ANY, LAMBDA and REPEAT. Python expressions are also valid expressions. With these operators, expressions can describe the logic of searching with filtering, math and logic computation, aggregation, correlation, transformation and recursive computations. 
+
 By introducing identifiers as placeholders for all the possible instatiations, the declarative language allows users to focus on describing data processing and transformation from input to output, without worrying about walking and manipulating data structures step-by-step.
 
 Expressions can comprise paths accessing data values from multiple data structures. The same identifiers can be used along the path to access values in different levels of the data structures.  An expression accessing a value from one data structure can be used in a path to access another data structure. In these ways, multiple data sources are correlated. The WHERE operator can also be used to correlate multiple data entries or data sources by specifying the relationships between expressions. Different identifiers accessing the same data entry represent different instantiations which can be used to create a correlation between the entries. Relationship definition between entries can be used to build a recursive chain. A lambda operator is used to describe those relationships. An expression built by REPEAT operator with lambda function generates a list of objects along the recursive chain.

@@ -16,6 +16,8 @@ During the experiment with ChatGPT, we provided the following examples as prompt
     WHERE is_internet_ip(flows[i]["id.resp_h"])
     WRITE server_access_internet_cnt.json FROM r
 
+    
+
     # Discovery-Network Service Scanning, this example collects all the destination host, and all the destination port,
     # and count the distinct destination host and count the distinct destination port, 
     # sort and limit 10 destination port for r1 as result and sort and limit 10 destination host for r2 as result
@@ -35,6 +37,8 @@ During the experiment with ChatGPT, we provided the following examples as prompt
         ORDER BY dhost_c DESC LIMIT 10 FOR r2;  dport_c DESC LIMIT 10 FOR r1
     write top_sender_dport.json from r1, 
         top_sender_dhost.json from r2
+   
+        
 
     # Discovery-Network Service Scanning, this example collects all the destination host, and all the destination port,
     # and count the distinct destination host and count the distinct destination port, 

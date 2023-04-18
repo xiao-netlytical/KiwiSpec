@@ -1,4 +1,4 @@
-During the experiment with ChatGPT, we provided the following examples as prompts for ChatGPT to generate code:
+During the experiment with ChatGPT, we provided the following examples as prompts for ChatGPT to learn KiwiSpec:
 
     # Here are examples code in KiwiSpec: 
     # "id.orig_h", "id.resp_h" and "orig_pkts" are the fields in Zeek log in json format for source ip, 

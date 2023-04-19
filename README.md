@@ -57,11 +57,11 @@ There are two sub-interests related to using KiwiSpec with code generation from 
 
 2. Using Codex to generate KiwiSpec code from natural language descriptions.
     
-As a declarative language, KiwiSpec is closely resembles natural language with accurate semantics. It is an effective way to document a task or an algorithm using human-like language. Specifications written in KiwiSpec are easy to adopt, read, maintain, and are unambiguous. Generating target code from KiwiSpec specifications can be a solution for a range of problems.
+As a declarative language, KiwiSpec closely resembles natural language with accurate semantics. It is an effective way to document a task or an algorithm using human-like language. Specifications written in KiwiSpec are easy to adopt, read, maintain, and are unambiguous. Generating target code from KiwiSpec specifications can be a solution for a range of applications.
 
-Although the recent OpenAI Codex model can generate Python, C, SQL, and other code from specifications, it still requires understanding and modifications. Instead of generated code in Python or C code, Code in KiwiSpec would be closer to the original request and easier to understand.
+While the OpenAI Codex model can generate code in languages like Python, C, SQL, and others, understanding and modification may still be required in the post-generation stage. The advantage of using KiwiSpec code is that it would be closer to the original request and easier to understand.
 
-This projects involve experiment with Codex to fine-tune the model or prompt engineering for KiwiSpec, with the goal of generating code in KiwiSpec from natural language or generating a target code from KiwiSpec.
+We conducted an experiment using ChatGPT to generate data processing code for security applications in KiwiSpec. In our experiment, we provided prompts for ChatGPT to learn KiwiSpec, and we were able to generate both KiwiSpec and Python code. You can find the example prompts and the generated code in KiwiSpec and Python at https://github.com/xiao-netlytical/kiwi/tree/main/with_ChatGPT.
 
 ## 6. To try KiwiSpec with the rules and a sample Zeek log
    

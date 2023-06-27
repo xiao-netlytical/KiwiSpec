@@ -29,7 +29,7 @@ var i select
     flows[i]["id.resp_h"] as ip2;
     collect set(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) group by ip2 as in_port
 
-create {app:ips:} as r 
+create {app:ips} as r 
 var ip, k select 
     r_dst[ip] as out_port; 
     r_src[ip | []] as in_port; 

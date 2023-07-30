@@ -8,21 +8,21 @@ var x select
 	4 as N;
     collect set(input[x]) as r where len(r) < N
 
-with r collect list(r) as rt
+with all r 
+collect list(r) as rt
 
 
 ############
 #Given a set of non-negative integers, and a value sum, 
 #determine if there is a subset of the given set with sum equal to given sum. 
 
-create r as rt
+create rt as result
 var i select
     [1,4,6,7,10] as input;
     20 as N;
     collect set(input[i]) as r where sum(r) == N
 
-with r  collect list(r) as rt;
-len(rt) as ct
+with one r as rt
 
 
 #############
@@ -95,4 +95,100 @@ var i,j select
     k[i] as prim;
     range(2, prim) as test;
     where all(prim/test[j] !=0)
+
+# How Do You Find Duplicate Numbers in an Array With Multiple Duplicates?
+
+create {n:ct} as r_cnt
+var i select
+[1,4,2,3,4,5,1,3] as n_array;
+n_array[i] as n;
+count(i) group by n as ct
+
+#How Do You Remove Duplicates From an Array in Place?
+
+create {n:ct} as r_cnt
+var i select
+[1,4,2,3,4,5,1,3] as n_array;
+n_array[i] as n;
+count(i) group by n as ct
+
+create [r_member]  as rst
+var i select
+n_array[i] where r_cnt[n_array[i]] != 0 as r_member;
+update r_cnt[n_array[i]] as 0
+
+
+#How Do You Find the Largest and Smallest Number in an Array of 1–100?
+
+create [l, s] as r
+var i select
+[1,4,2,3,4,5,1,3] as a;
+
+MAX(a[i]) as l
+MIN(a[i]) as s
+
+#How Do You Find All Pairs in an Array of Integers That Add Up to a Specific Sum?
+
+create {[p1,p2]} as r
+var i, j select
+[1,4,2,3,4,5,1,3] as a;
+5 as s;
+
+a[i] as p1;
+a[j] as p2;
+where p1+p2 = s
+
+#reverse an array
+create a as r
+var i select 
+[1,4,2,3,4,5,1,3] as a0;
+reverse(a0[i])
+
+#reverse an array
+create a as r
+var i select 
+[1,4,2,3,4,5,1,3] as a0;
+len(a0) as a0l;
+select list(a[a0l-i]) as a
+
+
+#Given two words (beginWord and endWord) and a dictionary’s word list, 
+find the length of the shortest transformation sequence from beginWord to endWord.
+
+create min_r as r
+
+["humie","humic","mal","mail","humid","wane",
+"jade","molt","moll","want","slag","wade",
+"mist","dolt","doll","mate","fade","maze",
+"wart","jake","wary","mitt","wake","gate",
+"mite","wait","faze","malt","hemic","male"] as dict;
+
+"wait" as start;
+"doll" as end;
+
+create [y] as r_list
+repeat (lambda x=start:r where r != end
+y as r;
+where y in dict and y not in r_list and diff_char(x, y) == 1)
+
+with one r_list as min_r
+where is_min(len(min_r))
+
+#Write a program that prints the numbers from 1 to 100. 
+But for multiples of three, print Fizz instead of the number, and multiples of five, print Buzz. 
+For numbers that are multiples of both three and five, print FizzBuzz.
+
+create a as r
+var i select 
+[1,4,2,3,4,5,1,3] as a0;
+a0[i] as n;
+case
+    "Fizz" where n%3 == 0 and n%15 != 0 ;
+    "Buzz" where n%5 == 0 and n%15 != 0 ;
+    "Buzz" where n%15 == 0;
+    n else
+    as item
+
+collect list(item)
+
 

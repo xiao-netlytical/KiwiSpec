@@ -35,7 +35,8 @@ def _eval_logic_fix_range(logic_range, input):
     if not range_unit:
         return input
     for i in input:
-        port_i = int(i[len('TCP_'):])
+        a,b = i.split('_')
+        port_i = int(i[len(a)+1:])
         port_s = i
         for k, r_i in range_unit.items():
             if port_i >= r_i[0] and port_i <= r_i[1]:
@@ -60,4 +61,13 @@ def eval_logic_expr(logic_input, input):
     exec(logic_b + input_b + r, globals())
     return rst
 
+def get_application_protocol(logic_input):
+    if logic_input.strip() =='':
+        return []
+    rep = {"(": " ", ")": " ", "and": " ", "or": " "}
+    logic_b = logic_input
+    for k, v in rep.items():
+        logic_b = logic_b.replace(k, v)
+    logic_unit = logic_b.split()
+    return logic_unit
 

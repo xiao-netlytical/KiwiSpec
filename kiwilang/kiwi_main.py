@@ -387,6 +387,11 @@ def get_access_maps(tokens, var_list, value_list):
 				pre_str = pre_i[0].strip('[')
 
 			curr_v = s_curr[1:-1].strip()
+
+			if curr_v in value_list:
+				i_depend.add(curr_v)
+				var_flag = True
+
 			if curr_v in var_list:
 				var_depend.append(curr_v)
 				i_depend.add(curr_v)
@@ -395,9 +400,7 @@ def get_access_maps(tokens, var_list, value_list):
 			elif var_flag:
 				if pre_str.lower() != 'range':
 					access_map.append([pre_str, curr_v])
-			if curr_v in value_list:
-				i_depend.add(curr_v)
-				var_flag = True
+
 
 			s_curr = pre_i[0]+s_curr
 			var_flag |= pre_i[1]
@@ -427,7 +430,7 @@ def fix_default_format(assign_a):
 		if i == '[':
 			if s_curr:
 				s_stack.append(s_curr)
-				s_curr = i
+			s_curr = i
 		elif i == ']':
 			s_curr += i
 			if '|' in s_curr:
@@ -568,7 +571,12 @@ class CreateBodyParser:
 					group_by_var = list_strip(group_by.split(','))
 					group_by = ','.join(group_by_var)
 					group_by_var = set(group_by_var)
+					if group_by.lower() == 'none':
+						group_by_var = set()
+						group_by = 'NONE'
 					self.var_agg_map[assign_value] = {'op':agg_op, 'group_by': '('+group_by+')'}
+
+						
 				else:
 					self.var_agg_map[assign_value] = {'op':agg_op, 'group_by': 'default_group_by'}
 					group_by_var = self.group_by_var
@@ -581,6 +589,7 @@ class CreateBodyParser:
 			assign_ex = assign_ex.replace(' where ', ' ').replace(' WHERE ', ' ')
 
 			assign_expr = list_strip(re.split("[+,-,*,/,%,^,!,=,(,),' ',',','{','}']", assign_ex))
+			# assign_expr = list_strip([assign_ex])
 			_get_all_maps(assign_expr, self.assign_depend, group_by_var)
 
 		print("self.assign_depend:", self.assign_depend)
@@ -588,7 +597,7 @@ class CreateBodyParser:
 
 		for i in self.var_agg_map.keys():
 			group_by = ','.join(list(self.group_by_var))
-			if group_by == '':
+			if self.var_agg_map[i]['group_by'] == '(NONE)' or group_by == '':
 				group_by = 'default_group_by'
 				self.var_agg_map[i]['group_by'] = '('+group_by+')'			
 			elif self.var_agg_map[i]['group_by'] == 'default_group_by':

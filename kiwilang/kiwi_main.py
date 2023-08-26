@@ -124,37 +124,41 @@ class CreateResultParser:
 			return self.current_tok
 
 
-	def parse_result_list(self, head):
-		r_tail = ''
-
+	def parse_disc(self, head, r_tail):
 		self.advance()
-		if self.current_tok.value == '{':
-			self.advance()
-			tmp_string = ''
-			while self.tok_idx < len(self.tokens) and self.current_tok.value != '}':
-				if self.current_tok.type == 'STR':
-					tmp_string += self.current_tok.value
-					self.advance()
-				elif self.current_tok.type == 'EXPR':
+		tmp_string = ''
+		while self.tok_idx < len(self.tokens) and self.current_tok.value != '}':
+			if self.current_tok.type == 'STR':
+				tmp_string += self.current_tok.value
+				self.advance()
+			elif self.current_tok.type == 'EXPR':
+				if self.current_tok.value in self.var_agg_map.keys():
+					tmp_string += f"""eval(r_tuple['{self.current_tok.value}'])"""
+				else:
+					tmp_string += f"""r_tuple['{self.current_tok.value}']"""
+				self.advance()
+			else:
+				tmp_string += self.current_tok.value
+				self.advance()
+
+			if self.current_tok.value == ':':
+				tmp_string += self.current_tok.value
+				self.advance()
+				if self.current_tok.type == 'EXPR':
 					if self.current_tok.value in self.var_agg_map.keys():
 						tmp_string += f"""eval(r_tuple['{self.current_tok.value}'])"""
 					else:
 						tmp_string += f"""r_tuple['{self.current_tok.value}']"""
-					self.advance()
-				else:
-					tmp_string += self.current_tok.value
-					self.advance()
+				self.advance()
 
-				if self.current_tok.value == ':':
-					tmp_string += self.current_tok.value
-					self.advance()
-					if self.current_tok.type == 'EXPR':
-						if self.current_tok.value in self.var_agg_map.keys():
-							tmp_string += f"""eval(r_tuple['{self.current_tok.value}'])"""
-						else:
-							tmp_string += f"""r_tuple['{self.current_tok.value}']"""
-					self.advance()
+		return  tmp_string
 
+
+	def parse_result_list(self, head):
+		r_tail = ''
+		self.advance()
+		if self.current_tok.value == '{':
+			tmp_string = self.parse_disc(head, r_tail)
 			tmp_string = '{' + tmp_string + '}'
 			r_tail += f"""{head}.append({tmp_string})\n"""
 
@@ -194,8 +198,15 @@ class CreateResultParser:
 				# r_tail+=f"""{head}[{tmp_values["key"]}]={tmp_result}"""   
 				r_tail+=f"""{tmp_result}"""          
 			elif self.current_tok.value == '{':
-				tmp = '{}'
-				r_tail = self.parse_result_dict(f"""{head}.setdefault({tmp_values["key"]}, {tmp})""")
+				# if the key inside "{"" is expr 
+				# e.g self.advance() if self.current_tok.type == 'EXPR':
+				# tmp = '{}'
+				# r_tail = self.parse_result_dict(f"""{head}.setdefault({tmp_values["key"]}, {tmp})""")
+				# if the key inside "{"" is str
+				# e.g self.advance() if self.current_tok.type == 'STR':
+				tmp_string = self.parse_disc(head, r_tail)
+				tmp_string = '{' + tmp_string + '}'
+				r_tail = f"""{head}[{tmp_values["key"]}] = {tmp_string}"""
 			else:
 				print("error - format")
 
@@ -290,42 +301,19 @@ class CreateResultParser:
 		return r_head, r_tail
 
 	def get_result_value_set(self): 
-		def _get_result_value_set_dict():
-			self.advance()
-			if self.current_tok.type == 'EXPR':
-				self.result_value_set.add(self.current_tok.value)
-			self.advance()
-			if self.current_tok.value == ':':
-				self.advance()
-				if self.current_tok.type == 'EXPR':
-					self.result_value_set.add(self.current_tok.value)
-					self.advance()
-				elif self.current_tok.value == '[':
-					_get_result_value_set_list()
-				elif self.current_tok.value == '{':
-					_get_result_value_set_dict()
-			
-
-		def _get_result_value_set_list():
-			self.advance()
-			if self.current_tok.value == '{':
-				self.advance()
-				while self.tok_idx < len(self.tokens) and self.current_tok.value != '}':
-					if self.current_tok.type == 'EXPR':
-						self.result_value_set.add(self.current_tok.value)
-					self.advance()
 
 		self.result_value_set = set()
+
 		if self.current_tok.type == 'STR' or self.current_tok.type == 'EXPR':
 			self.result_value_set.add(self.current_tok.value)
 		else:
-			if self.current_tok.value == '{':
-				_get_result_value_set_dict()
-			if self.current_tok.value == '[':
-				_get_result_value_set_list()
+			self.advance()
+			while self.tok_idx < len(self.tokens):
+				if self.current_tok.type == 'EXPR':
+						self.result_value_set.add(self.current_tok.value)
+				self.advance()
 
-		return self.result_value_set
-			
+		return self.result_value_set		
 
 
 class BodyLexer:
@@ -589,7 +577,6 @@ class CreateBodyParser:
 			assign_ex = assign_ex.replace(' where ', ' ').replace(' WHERE ', ' ')
 
 			assign_expr = list_strip(re.split("[+,-,*,/,%,^,!,=,(,),' ',',','{','}']", assign_ex))
-			# assign_expr = list_strip([assign_ex])
 			_get_all_maps(assign_expr, self.assign_depend, group_by_var)
 
 		print("self.assign_depend:", self.assign_depend)

@@ -464,7 +464,7 @@ class CreateBodyParser:
 
 		boundary = ['order by', 'group by', 'where']
 		follows = [';']
-		query_list = parser_get_query_list(text, boundary, follows)
+		query_list = parser_get_query_list(text, boundary, follows, True)
 
 		self.order_text = ''
 		self.group_text = ''
@@ -963,7 +963,7 @@ def FromPaser(fn, text):
 	r = ''
 	for fl in l:
 		f, s = split(fl, ' as ')
-		r += f'{s} = read_json_file("{f}");'
+		r += f'{s} = read_json_file(f"{f}");'
 	return r
 
 def ToPaser(fn, text):
@@ -974,7 +974,7 @@ def ToPaser(fn, text):
 		f, d = split(text_t, ' from ')
 		f = f.strip()
 		d = d.strip()
-		r += f'\nwrite_json_file("{f}", {d});'
+		r += f'\nwrite_json_file(f"{f}", {d});'
 	return r
 
 def CreatePaser(fn, text):
@@ -1078,26 +1078,35 @@ def UpdatePaser(fn, text):
 
 	return r_code,result_var
 
-def find_boundary(text, boundary, follows):
+def find_boundary(text, boundary, follows, multi):
 	tmp_text = text.strip("' ', '\n', '\t'")[1:]
 	body_end = -1
 	for b in boundary:
-		next = tmp_text.find(b)
-		if next == -1:
-			next = tmp_text.find(b.upper())
-		if next != -1 and tmp_text[next-1] in [' ', '\n', '\t', ';'] \
-			and tmp_text[next+len(b)] in [' ', '\n', '\t', ';']:
-			if not follows or tmp_text[:next-1].strip("' ', '\n', '\t'")[-1] in follows:
-				if (body_end == -1 or next < body_end):
-					body_end = next
+		repeat_b = True
+		start = 0
+		while repeat_b:
+			next = tmp_text.lower().find(b, start)
+			if next != -1 and \
+				tmp_text[next-1] in [' ', '\n', '\t', ';'] and \
+				tmp_text[next+len(b)] in [' ', '\n', '\t', ';']:
+					if not follows or tmp_text[:next-1].strip("' ', '\n', '\t'")[-1] in follows:
+						if (body_end == -1 or next < body_end):
+							body_end = next
+						repeat_b = False
+					else:
+						start = next+ +len(b)
+						repeat_b = multi
+
+			else:
+				repeat_b = False
 	return body_end
 
-def parser_get_query_list(text, boundary, follows=[]):
+def parser_get_query_list(text, boundary, follows=[], multi=False):
 	text = text.strip("' ', '\n', '\t'")
 
 	query_list = []
 	while text:
-		body_end = find_boundary(text,boundary, follows)
+		body_end = find_boundary(text,boundary, follows, multi)
 		if body_end == -1:
 			query_list.append(text.strip("' ', '\n', '\t', ';'"))
 			text = ''

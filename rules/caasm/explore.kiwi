@@ -1,0 +1,264 @@
+define conn_path=../sample_data/zeek, write_path=../sample_data/result, 
+application_path=../rules/application
+
+# get all ther unidentified servers and the protocols recieved
+READ conn_path/conn.json AS flows, 
+write_path/clean_ip_to_servers.json as ip_servers,
+application_path/proto_desciption.json as proto_disc
+create {d_ip:protos} as r
+var i select
+flows[i]["id.resp_h"] AS d_ip;
+flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"]) as proto;
+collect set(proto+":"+",".join(proto_disc[proto | []])) group by d_ip AS protos;
+where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"];
+    d_ip not in ip_servers.keys() and not flows[i]["proto"].startswith("icmp") 
+write write_path/unidentified_server_and_proto.json from r
+
+
+# group the unidentified servers and the protocols recieved
+READ conn_path/conn.json AS flows, 
+write_path/clean_ip_to_servers.json as ip_servers,
+application_path/proto_desciption.json as proto_disc
+create {disc: {"s_ips": ips, "c_ips": c_ips}} as r
+var i select
+flows[i]["id.resp_h"] AS d_ip;
+flows[i]["id.orig_h"] as s_ip;
+flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"]) as proto;
+proto_disc[proto | ""] AS disc;
+collect set(d_ip) group by proto as ips;
+collect set(s_ip) group by proto as c_ips;
+where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"];
+    d_ip not in ip_servers.keys() and not flows[i]["proto"].startswith("icmp");
+    disc
+write write_path/unidentified_servers.json from r
+
+# get all the protocols which is  not identified server supported protocol
+READ conn_path/conn.json AS flows, 
+write_path/clean_ip_to_servers.json as ip_servers, 
+application_path/app_proto.json as proto_list,
+application_path/proto_desciption.json as proto_disc
+create {d_ip: serv_protos} as ser_protos
+VAR i, SELECT
+    flows[i]["id.resp_h"] AS d_ip;
+    ip_servers[d_ip] as apps;
+    collect set(proto_list[apps[_]]["in_proto"][_]) group by d_ip as serv_protos;
+where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"];
+      d_ip in ip_servers.keys()
+
+create [{"ip":  d_ip, "srv": apps, "abnormal_proto": protos}] as r
+var i select
+	flows[i]["id.resp_h"] AS d_ip;
+	ip_servers[d_ip] as apps;
+    flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"]) as proto;
+    collect set(proto+":"+",".join(proto_disc[proto | []])) group by d_ip as protos;
+    where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"];
+	      not flows[i]["proto"].startswith("icmp"); d_ip in ip_servers.keys(); proto not in ser_protos[d_ip]
+write write_path/abnormal_proto_to_server.json from r
+
+
+# baseline server to server communication
+READ write_path/clean_ip_to_servers.json AS srvs, 
+write_path/clean_server_to_ips.json AS ips,
+conn_path/conn.json AS flows, 
+application_path/app_proto.json as proto_list,
+application_path/proto_desciption.json as proto_disc
+
+CREATE [{"s_srv":s_srv, "d_srv":d_srv, "protos": proto, "disc": disc, "src_count": s_srv_c, "dst_count": d_srv_c, "s_count": s_count, "d_count":d_count}] AS r
+VAR i SELECT
+	flows[i]["id.orig_h"] as s_ip;
+	flows[i]["id.resp_h"] as d_ip;
+    srvs[s_ip][_] AS s_srv;
+    srvs[d_ip][_] AS d_srv;
+    len(ips[s_srv]) as s_srv_c;
+    len(ips[d_srv]) as d_srv_c;
+    proto_list[d_srv]["in_proto"] as s_protos;
+    flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"]) AS proto;
+    proto_disc[proto | "Unknown"] as disc;
+    COUNT DISTINCT(s_ip) group by s_srv, proto as s_count;
+    COUNT DISTINCT(d_ip) group by d_srv, proto as d_count;
+    where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"];
+    proto in s_protos;
+    
+WRITE write_path/baseline_server_to_server_traffic.json FROM r
+
+# find failed (no reponse, rejected) traffic between servers
+READ write_path/clean_ip_to_servers.json AS srvs, 
+write_path/clean_server_to_ips.json AS ips,
+conn_path/conn.json AS flows, 
+application_path/app_proto.json as proto_list,
+application_path/proto_desciption.json as proto_disc
+
+CREATE [{"s_srv":s_srv, "d_srv":d_srv, "protos": proto, "disc": disc, "rej_count": rej_count, "permit_count": permit_count, "app_proto":app_proto,  "src_count": s_srv_c, "dst_count": d_srv_c, "s_count": s_count, "d_count":d_count}] AS r
+VAR i SELECT
+	flows[i]["id.orig_h"] as s_ip;
+	flows[i]["id.resp_h"] as d_ip;
+    srvs[s_ip][_] AS s_srv;
+    srvs[d_ip][_] AS d_srv;
+    len(ips[s_srv]) as s_srv_c;
+    len(ips[d_srv]) as d_srv_c;
+    proto_list[d_srv]["in_proto"] as s_protos;
+    flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"]) AS proto;
+    proto_disc[proto | "Unknown"] as disc;
+    flows[i]["conn_state"] == "REJ" as rej;
+    flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"] as permit;
+    count distinct(i) where rej == True GROUP BY s_srv,d_srv,proto AS rej_count;
+    count distinct(i) where permit == True GROUP BY s_srv,d_srv,proto AS permit_count;
+    COUNT DISTINCT(s_ip) group by s_srv,d_srv,proto as s_count;
+    COUNT DISTINCT(d_ip) group by s_srv,d_srv,proto as d_count;
+    proto in s_protos as app_proto;
+
+where flows[i]["conn_state"] in ["S0", "REJ", "OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"]
+
+WRITE write_path/server_to_server_reject_proto.json FROM r
+
+# total identified server count, client count, and unidentified service workload count
+READ conn_path/conn.json AS flows,
+write_path/clean_ip_to_servers.json AS srvs
+CREATE ips AS s_ips
+VAR i SELECT 
+    COLLECT SET(flows[i]["id.resp_h"]) AS ips;
+    where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"];
+    not flows[i]["proto"].startswith("icmp") 
+
+CREATE ips AS c_ips
+VAR i select
+    COLLECT SET(flows[i]["id.orig_h"]) AS ips;
+where flows[i]["id.orig_h"] not in s_ips
+
+CREATE uis AS u_s_ips
+VAR i SELECT 
+	collect set(s_ips[i]) AS uis;
+where s_ips[i] not in srvs.keys()
+
+
+CREATE c AS count
+var i select
+len(set(s_ips)) as a1;
+len(c_ips) as a2;
+len(srvs.keys()) as a3;
+{"a1":a1, "a2":a2, "a3":a3} as c
+
+WRITE write_path/server_ips.json FROM s_ips, write_path/client_ips.json FROM c_ips, write_path/unidentified_s_ips.json from u_s_ips,
+write_path/count.json from count
+
+#explor traffic proto
+READ write_path/clean_ip_to_servers.json AS srvs, 
+write_path/clean_server_to_ips.json AS ips,
+conn_path/conn.json AS flows, 
+application_path/app_proto.json as proto_list,
+application_path/proto_desciption.json as proto_disc
+
+CREATE [{"s_srv":s_srv, "d_srv":d_srv, "protos": proto, "disc": disc, "rej_count": rej_count, "permit_count": permit_count, "app_proto":app_proto,  "src_count": s_srv_c, "dst_count": d_srv_c, "s_count": s_count, "d_count":d_count}] AS r
+VAR i SELECT
+	flows[i]["id.orig_h"] as s_ip;
+	flows[i]["id.resp_h"] as d_ip;
+    srvs[s_ip][_] AS s_srv;
+    srvs[d_ip][_] AS d_srv;
+    len(ips[s_srv]) as s_srv_c;
+    len(ips[d_srv]) as d_srv_c;
+    proto_list[d_srv]["in_proto"] as s_protos;
+    flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"]) AS proto;
+    proto_disc[proto | "Unknown"] as disc;
+    flows[i]["conn_state"] == "REJ" as rej;
+    flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"] as permit;
+    count distinct(i) where rej == True GROUP BY s_srv,d_srv,proto AS rej_count;
+    count distinct(i) where permit == True GROUP BY s_srv,d_srv,proto AS permit_count;
+    COUNT DISTINCT(s_ip) group by s_srv,d_srv,proto as s_count;
+    COUNT DISTINCT(d_ip) group by s_srv,d_srv,proto as d_count;
+    proto in s_protos as app_proto;
+where flows[i]["conn_state"] in ["S0", "REJ", "OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"]
+
+WRITE write_path/server_to_server_proto_explore.json FROM r	
+
+# create server to server permit rules
+read  write_path/server_to_server_proto_explore.json as r
+CREATE [{"s_srv":s_srv, "d_srv":d_srv, "proto": proto}] as p_rule
+var i select
+	r[i]["s_srv"] as s_srv;
+	r[i]["d_srv"] as d_srv;
+	r[i]["protos"] as proto;
+	where r[i]["rej_count"] == 0 and r[i]["permit_count"] > 0 and (s_srv != "WebServer" or d_srv != "WebServer");
+	r[i]["disc"] != "Unknown"
+
+update p_rule
+var i set
+	p_rule[i]["index"] as "rule_"+str(i)
+
+WRITE write_path/server_to_server_permit.json FROM p_rule
+
+# none server permit rules
+READ write_path/clean_ip_to_servers.json AS srvs, 
+write_path/clean_server_to_ips.json AS ips,
+conn_path/conn.json AS flows, 
+application_path/app_proto.json as proto_list,
+application_path/proto_desciption.json as proto_disc
+
+CREATE [{"src":src, "dst":dst, "proto": proto, "disc": disc}] AS r
+VAR i SELECT
+	flows[i]["id.orig_h"] as s_ip;
+	flows[i]["id.resp_h"] as d_ip;
+    ",".join(srvs[s_ip | []]) AS s_srv;
+    ",".join(srvs[d_ip | []]) AS d_srv;
+    d_srv if d_srv and d_srv != "WebServer" else d_ip as dst;
+    flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"]) AS proto;
+    proto_disc[proto | "Unknown"] as disc;
+    collect set(s_ip) group by dst, proto as src;
+where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"];
+(not s_srv or s_srv == "WebServer") and (not d_srv or d_srv == "WebServer" ); disc != "Unknown"
+WRITE write_path/permit_rules.json FROM r	
+
+CREATE [{"src":src, "dst":dst, "proto": proto, "disc": disc}] AS r1
+var i select
+	r[i]["src"] as src;
+	r[i]["proto"] as proto;
+	r[i]["disc"] as disc;
+	(src).sort() as tmp;
+	"_".join(src) as src_g;
+	collect set(r[i]["dst"]) group by src_g, proto as dst
+
+CREATE [{"src":src, "dst":dst, "proto": protos}] AS r2
+var i select
+	r1[i]["src"] as src;
+	r1[i]["dst"] as dst;
+	r1[i]["proto"] as proto;
+	(src).sort() as tmp1;
+	(dst).sort() as tmp2;
+	"_".join(src) as src_g;
+	"_".join(dst) as dst_g;
+	collect set(r1[i]["proto"]) group by src_g, dst_g as protos
+
+update r2
+var i set
+	r2[i]["index"] as "rule_"+str(i)
+
+WRITE write_path/agg_permit_rules.json FROM r2
+
+##########
+# For each destination IP with it's classified application, 
+# get the list of internet IPs accessing the destination, and the next hop IP which is accessing
+read write_path/server.json AS srv, conn_path/conn.json AS flows
+CREATE {d_ip: [{"srv": d_srvs, "s_ips": s_ips, "accessing": access}]} AS r
+VAR i, j SELECT
+    flows[i]["id.resp_h"] AS d_ip;
+    COLLECT LIST(flows[i]["id.orig_h"]) GROUP BY d_ip AS s_ips;
+    srv[d_ip] AS d_srvs;
+    flows[j]["id.orig_h"] AS out_ip;
+    COLLECT LIST(srv[flows[j]["id.resp_h"]]) GROUP BY out_ip AS access;
+WHERE is_internet_ip(flows[i]["id.orig_h"]); d_ip == out_ip
+WRITE write_path/from_internet_app_access.json FROM r
+
+####################
+#READ conn.json AS flows, server.json AS srv
+#VAR i 
+#SELECT
+#flows[i]["id.orig_h"] AS src_ip where is_internet_ip(src_ip);
+
+#create [x] as path_recording WHERE x in srv.keys() and x != src_ip
+#REPEAT(LAMBDA x=src_ip:dst_ip:limit 5
+#        VAR j 
+#        flows[j][“id.resp_h”] AS dst_ips                           
+#        WHERE flows[j][“id.resp_p”] == 3389 AND flows[j][“id.orig_h"] == x)
+
+#with all path_recording
+#CREATE {src_ip: [path_recording]} AS result
+#WRITE path_recording.json FROM result

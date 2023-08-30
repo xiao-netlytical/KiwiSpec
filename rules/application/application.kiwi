@@ -8,12 +8,13 @@ var i select
     flows[i]["id.orig_h"] as ip1;
     collect set(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) group by ip1 as out_port;
     flows[i]["id.resp_h"] as ip2;
-    collect set(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) group by ip2 as in_port
+    collect set(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) group by ip2 as in_port;
+    where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"]
 
 create {ip:apps} as r 
 var ip, k select 
-    r_dst[ip] as out_port; 
-    r_src[ip | []] as in_port; 
+    r_dst[ip] as in_port; 
+    r_src[ip | []] as out_port; 
     collect list(application[k]["app_name"]) group by ip as apps;
 where 
     eval_logic_expr(application[k]["outbound_protocol"], out_port);
@@ -27,12 +28,13 @@ var i select
     flows[i]["id.orig_h"] as ip1;
     collect set(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) group by ip1 as out_port;
     flows[i]["id.resp_h"] as ip2;
-    collect set(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) group by ip2 as in_port
+    collect set(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) group by ip2 as in_port;
+    where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"]
 
 create {app:ips} as r 
 var ip, k select 
-    r_dst[ip] as out_port; 
-    r_src[ip | []] as in_port; 
+    r_dst[ip] as in_port; 
+    r_src[ip | []] as out_port; 
     application[k]["app_name"] as app;
     collect set(ip) group by app as ips;
 where 
@@ -40,15 +42,48 @@ where
     eval_logic_expr(application[k]["inbound_protocol"], in_port)
 write write_path/server_to_ips.json from r
 
+# get mapping of ip address to the list of applications
+# from the existing app to ips mapping
+read write_path/ip_to_servers.json as srv
+update srv 
+var ip set 
+    srv[ip] as list(set(srv[ip]) - {"WebServer"}); 
+    where srv[ip] != ["WebServer"]
+write write_path/clean_ip_to_servers.json from srv
 
 # get mapping of ip address to the list of applications
 # from the existing app to ips mapping
-read write_path/server_to_ips.json as srv
-create {ip: apps} as r
-var app select 
-    srv[_][_] as ip; 
-    collect set(app from srv[app]) as apps; where ip in srv[app]
-write write_path/server.json from r
+read write_path/clean_ip_to_servers.json as ip_srv
+create {srv: ips} as r
+var ip select 
+    ip_srv[_][_] as srv; 
+    collect set(ip from ip_srv[ip]) as ips; where srv in ip_srv[ip]
+write write_path/clean_server_to_ips.json from r
 
+read write_path/clean_ip_to_servers.json as ip_srv
+create {srv: ips} as r
+var ip select 
+    ip_srv[ip][_] as srv; 
+    collect set(ip) as ips
+write write_path/clean_server_to_ips.json from r
 
+# protocol/port an application server can accept and send
+read app_define/application_rule.json as application
+create {name: {"in_proto": in_proto, "out_proto": out_proto}} as r 
+var i select 
+    application[i]["app_name"] as name;
+    get_application_protocol(application[i]["inbound_protocol"]) as in_proto;
+    get_application_protocol(application[i]["outbound_protocol"]) as out_proto
+write app_define/app_protos.json from r
 
+# Service to service name mapping
+READ app_define/service-names-port-numbers.json as service_name
+create {proto:disc} as r1 
+VAR i select
+    service_name["service"][i]["Transport Protocol"].upper()+"_"+service_name["service"][i]["Port Number"] as proto;
+    collect set(service_name["service"][i]["Description"]) as disc
+
+create {i:disc} as r    
+var i select
+     ",".join(r1[i]) as disc
+WRITE app_define/proto_desciption.json FROM r

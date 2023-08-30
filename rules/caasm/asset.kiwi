@@ -55,12 +55,13 @@ WRITE write_path/traffic_agg.json FROM r
 
 # aggregate the connections for each source application and destination application pair
 READ write_path/server.json AS srv, conn_path/conn.json AS flows
-CREATE [{"s_srv":s_srv, "d_srv":d_srv, "o_pkts":o_pkts, "r_pkts":r_pkts}] AS r
+CREATE [{"s_srv":s_srv, "d_srv":d_srv, "o_pkts":o_pkts, "r_pkts":r_pkts, "protos": proto}] AS r
 VAR i SELECT
     srv[flows[i]["id.orig_h"]][_] AS s_srv;
     srv[flows[i]["id.resp_h"]][_] AS d_srv;
     SUM(flows[i]["orig_pkts"]) AS o_pkts;
-    SUM(flows[i]["resp_pkts"]) AS r_pkts
+    SUM(flows[i]["resp_pkts"]) AS r_pkts;
+    COLLECT SET(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) AS proto
 WRITE write_path/server_to_server_traffic.json FROM r
 
 # for each application, get the list of internet IP addresses accessing the application
@@ -99,29 +100,9 @@ VAR i SELECT
     COLLECT SET(srv[i]["d_srv"]) AS d_srv
 WRITE write_path/server_acc_servers.json FROM r
 
-# update server_to_server_traffic.json table with IPs associated with the applicaiton
-READ write_path/server_to_server_traffic.json AS srv_rel, write_path/server_to_ips.json AS srv_ips
-UPDATE srv_rel VAR i set
-    srv_rel[i]["s_ips"] AS srv_ips[srv_rel[i]["s_srv"] | []];
-    srv_rel[i]["d_ips"] AS srv_ips[srv_rel[i]["d_srv"] | []]
-WRITE write_path/server_acc_server_with_ips.json FROM srv_rel
-
-
 READ write_path/server_to_server_traffic.json AS srv_rel, write_path/server_to_ips.json AS srv_ips
 UPDATE srv_rel VAR i set
     srv_rel[i]["s_ips"] AS srv_ips[srv_rel[i]["s_srv"]];
     srv_rel[i]["d_ips"] AS srv_ips[srv_rel[i]["d_srv"]]
 WRITE write_path/server_acc_server_with_ips.json FROM srv_rel
 
-# For each destination IP with it's classified application, 
-# get the list of internet IPs accessing the destination, and the next hop IP which is accessing
-read write_path/server.json AS srv, conn_path/conn.json AS flows
-CREATE {d_ip: [{"srv": d_srvs, "s_ips": s_ips, "accessing": access}]} AS r
-VAR i, j SELECT
-    flows[i]["id.resp_h"] AS d_ip;
-    COLLECT LIST(flows[i]["id.orig_h"]) GROUP BY d_ip AS s_ips;
-    srv[d_ip] AS d_srvs;
-    flows[j]["id.orig_h"] AS out_ip;
-    COLLECT LIST(srv[flows[j]["id.resp_h"]]) GROUP BY out_ip AS access;
-WHERE is_internet_ip(flows[i]["id.orig_h"]); d_ip == out_ip
-WRITE write_path/from_internet_app_access.json FROM r

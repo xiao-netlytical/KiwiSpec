@@ -314,7 +314,7 @@ create proto as proto_list
 	var i select
 	collect set (app_proto[i][_]) as proto
 
-CREATE {proto: {"s_ip":s_ip, "d_ip":d_ip, "disc":disc }} AS client_rules
+CREATE {proto: {"s_ip":s_ip, "d_ip":d_ip, "disc":disc, "rule":r_n}} AS client_rules
 VAR i SELECT
 	flows[i]["id.orig_h"] as sip;
 	flows[i]["id.resp_h"] as dip;
@@ -322,32 +322,28 @@ VAR i SELECT
 	proto+":"+proto_disc[proto | "Unknown"] as disc;
 	collect set(flows[i]["id.orig_h"]) group by proto as s_ip;
 	collect set(flows[i]["id.resp_h"]) group by proto as d_ip;
+	"rule_"+str(index_by(proto)) as r_n;
     where sip not in srv_list and dip not in srv_list;
 		flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"]
-update client_rules
-var i set
-	client_rules[i]["index"] as "rule_"+str(i)
 WRITE output_path/client_rules.json from client_rules
 
-CREATE {proto: {"s_ip":s_ip, "dsrv":dsrv, "disc":disc }} AS client_to_server_rules
+CREATE {proto: {"s_ip":s_ip, "dsrv":dsrv, "disc":disc, "rule":r_n}} AS client_to_server_rules
 VAR i SELECT
 	flows[i]["id.orig_h"] as sip;
 	flows[i]["id.resp_h"] as dip;
-    srvs[dip][_] AS d_srv;
 	flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"]) AS proto;
 	proto+":"+proto_disc[proto | "Unknown"] as disc;
+	srvs[dip][_] AS d_srv;
 	collect set(flows[i]["id.orig_h"]) group by proto as s_ip;
 	collect set(d_srv) group by proto as dsrv;
+	"rule_"+str(index_by(proto)) as r_n;
     where sip not in srv_list and dip in srv_list;
 		proto not in proto_list or proto in app_protos[d_srv];
 		flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"]
-update client_to_server_rules
-var i set
-	client_to_server_rules[i]["index"] as "rule_"+str(i)
 WRITE output_path/client_to_server_rules.json from client_to_server_rules
 
 
-CREATE {proto: {"s_ip":ssrv, "dsrv":dsrv, "disc":disc }} AS server_rules
+CREATE {proto: {"s_ip":ssrv, "dsrv":dsrv, "disc":disc, "rule":r_n}} AS server_rules
 VAR i SELECT
 	flows[i]["id.orig_h"] as sip;
 	flows[i]["id.resp_h"] as dip;
@@ -357,12 +353,10 @@ VAR i SELECT
 	proto+":"+proto_disc[proto | "Unknown"] as disc;
 	collect set(s_srv) group by proto as ssrv;
 	collect set(d_srv) group by proto as dsrv;
+	"rule_"+str(index_by(proto)) as r_n;
     where sip in srv_list and dip in srv_list;
 		proto not in proto_list or proto in app_protos[d_srv];
 		flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"]
-update server_rules
-var i set
-	server_rules[i]["index"] as "rule_"+str(i)
 WRITE output_path/server_rules.json from server_rules
 
 create [{"proto":proto, "s_ip":sip, "d_ip":dip}] as r
@@ -373,6 +367,7 @@ var i select
 where flows[i]["conn_state"] in ["S0", "REJ"];
 	sip not in srv_list and dip not in srv_list and sip in client_rules[proto|{}]["s_ip"|[]] and dip in client_rules[proto|{}]["d_ip"|[]] or sip not in srv_list and dip in srv_list and sip in client_to_server_rules[proto|{}]["s_ip"|[]] and set(srvs[dip]) & set(client_to_server_rules[proto|{}]["d_ip"|[]]) or sip in srv_list and dip in srv_list and set(srvs[sip]) & set(client_to_server_rules[proto|{}]["s_ip"|[]])  and set(srvs[dip]) & set(client_to_server_rules[proto|{}]["d_ip"|[]]) 
 	
+
 WRITE output_path/violate_rules.json from r
 ############################
 

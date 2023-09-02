@@ -71,3 +71,9 @@ def get_application_protocol(logic_input):
     logic_unit = logic_b.split()
     return logic_unit
 
+
+_index_by = {}
+def index_by(i):
+    _index_by[i] = _index_by.get(i, len(_index_by.keys())+1)
+    return (_index_by[i])
+    

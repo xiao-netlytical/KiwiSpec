@@ -73,7 +73,11 @@ def get_application_protocol(logic_input):
 
 
 _index_by = {}
-def index_by(i):
-    _index_by[i] = _index_by.get(i, len(_index_by.keys())+1)
-    return (_index_by[i])
+def index_by(*args):
+    _index_by[args] = _index_by.get(args, len(_index_by.keys())+1)
+    return (_index_by[args])
     
+
+def init_util():
+    global _index_by
+    _index_by = {}

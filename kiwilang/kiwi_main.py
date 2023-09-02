@@ -213,7 +213,8 @@ class CreateResultParser:
 		return r_tail
 
 	def preparse(self):
-		r_head = 'default_group_by="default_group_by"\n'
+		r_head ="init_util()\n"
+		r_head += 'default_group_by="default_group_by"\n'
 		for k in self.var_agg_map.keys():
 			if self.var_agg_map[k]["op"] in ['collect list', 'collect set', 'count distinct', 'sum', 'min', 'max']:
 				tmp = '{}'
@@ -1070,7 +1071,7 @@ def UpdatePaser(fn, text):
 
 	# dump the code
 	offset_space = ''
-	r_code = ''
+	r_code = 'init_util()\n'
 	for l in body_loop:
 		r_code += offset_space + f'{l}\n'
 		if l.startswith('for') or l.startswith('if'):

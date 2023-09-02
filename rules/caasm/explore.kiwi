@@ -177,17 +177,15 @@ WRITE write_path/server_to_server_proto_explore.json FROM r
 ####################
 # create server to server permit rules
 read  write_path/server_to_server_proto_explore.json as r
-CREATE [{"s_srv":s_srv, "d_srv":d_srv, "proto": proto}] as p_rule
+CREATE [{"s_srv":s_srv, "d_srv":d_srv, "proto": proto, "index":r_n}] as p_rule
 var i select
 	r[i]["s_srv"] as s_srv;
 	r[i]["d_srv"] as d_srv;
 	r[i]["protos"] as proto;
+    "rule_"+str(index_by(i)) as r_n;
 	where r[i]["rej_count"] == 0 and r[i]["permit_count"] > 0 and (s_srv != "WebServer" or d_srv != "WebServer");
 	r[i]["disc"] != "Unknown"
 
-update p_rule
-var i set
-	p_rule[i]["index"] as "rule_"+str(i)
 
 WRITE write_path/server_to_server_permit_rules.json FROM p_rule
 
@@ -222,7 +220,7 @@ var i select
 	"_".join(src) as src_g;
 	collect set(r[i]["dst"]) group by src_g, proto as dst
 
-CREATE [{"src":src, "dst":dst, "proto": protos}] AS r2
+CREATE [{"src":src, "dst":dst, "proto": protos, "index":r_n}] AS r2
 var i select
 	r1[i]["src"] as src;
 	r1[i]["dst"] as dst;
@@ -231,11 +229,8 @@ var i select
 	(dst).sort() as tmp2;
 	"_".join(src) as src_g;
 	"_".join(dst) as dst_g;
+    "rule_"+str(index_by(src_g, dst_g)) as r_n;
 	collect set(r1[i]["proto"]) group by src_g, dst_g as protos
-
-update r2
-var i set
-	r2[i]["index"] as "rule_"+str(i)
 
 WRITE write_path/agg_permit_rules.json FROM r2
 

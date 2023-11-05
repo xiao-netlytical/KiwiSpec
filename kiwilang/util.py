@@ -81,3 +81,31 @@ def index_by(*args):
 def init_util():
     global _index_by
     _index_by = {}
+
+def draw_conn(result):
+    import networkx as nx
+    import matplotlib.pyplot as plt
+
+    # Define your list of point-to-point connections as tuples (source, target)
+
+    connections = []          
+    for i in result:
+        connections.extend(i)
+
+    # Create a directed graph
+    G = nx.DiGraph()
+
+    # Add nodes and edges to the graph
+    for src, tgt in connections:
+        G.add_node(src)
+        G.add_node(tgt)
+        G.add_edge(src, tgt)
+
+    # Define the layout for the graph (e.g., spring_layout, circular_layout, etc.)
+    layout = nx.spring_layout(G)
+
+    # Draw the graph
+    nx.draw(G, layout, with_labels=True, node_size=500, node_color='lightblue', font_size=5, font_color='black', font_weight='bold', arrows=True, connectionstyle="arc3,rad=0.2")
+    plt.title("Point-to-Point Link Graph")
+    plt.axis('off')  # Turn off the axis
+    plt.show()

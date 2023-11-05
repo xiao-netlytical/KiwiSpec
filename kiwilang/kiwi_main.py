@@ -154,19 +154,21 @@ class CreateResultParser:
 		return  tmp_string
 
 
-	def parse_result_list(self, head):
+	def parse_result_list(self, head, offset=''):
 		r_tail = ''
 		self.advance()
 		if self.current_tok.value == '{':
 			tmp_string = self.parse_disc(head, r_tail)
 			tmp_string = '{' + tmp_string + '}'
-			r_tail += f"""{head}.append({tmp_string})\n"""
+			r_tail += offset + f"""{head}.append({tmp_string})\n"""
 
 		elif self.current_tok.type == 'EXPR':
 			if self.current_tok.value in self.var_agg_map.keys():
-				r_tail += f"""eval({head}.append(r_tuple['{self.current_tok.value}']))"""
+				r_tail += offset + f"""_{head} = eval(r_tuple['{self.current_tok.value}'])\n"""
+				r_tail += offset + f"""if _{head}: {head}.append(_{head})"""
 			else:
-				r_tail += f"""{head}.append(r_tuple['{self.current_tok.value}'])"""
+				r_tail += offset + f"""_{head} = r_tuple['{self.current_tok.value}']\n"""
+				r_tail += offset + f"""if _{head}:  {head}.append(_{head})"""
 			self.advance()
 		return r_tail
 
@@ -298,7 +300,7 @@ class CreateResultParser:
 
 			if self.current_tok.value == '[':
 				r_head += f"""{self.result_var} = []\n"""
-				r_tail += "    " + self.parse_result_list(self.result_var)+"\n"
+				r_tail += self.parse_result_list(self.result_var, "    ")+"\n"
 		return r_head, r_tail
 
 	def get_result_value_set(self): 
@@ -563,11 +565,26 @@ class CreateBodyParser:
 					if group_by.lower() == 'none':
 						group_by_var = set()
 						group_by = 'NONE'
-					self.var_agg_map[assign_value] = {'op':agg_op, 'group_by': '('+group_by+')'}
+					self.var_agg_map[assign_value] = {'op':agg_op, 
+									   'group_by': '('+group_by+')',
+									   'agg_op': 'aggregate'}
 
-						
+				elif str_in(' extend by ', assign_ex):
+					assign_ex, group_by = split(assign_ex, ' extend by ')
+					group_by_var = list_strip(group_by.strip( "')','('").split(','))
+					group_by = group_by.strip()
+					group_by_var = set(group_by_var)
+					if group_by.lower() == 'none':
+						group_by_var = set()
+						group_by = 'NONE'
+					self.var_agg_map[assign_value] = {'op':agg_op, 
+									   'group_by': group_by,
+									   'agg_op': 'extend'}
+
 				else:
-					self.var_agg_map[assign_value] = {'op':agg_op, 'group_by': 'default_group_by'}
+					self.var_agg_map[assign_value] = {'op':agg_op, 
+									   'group_by': 'default_group_by',
+									   'agg_op': 'aggregate'}
 					group_by_var = self.group_by_var
 				assign_ex = assign_ex.strip()
 				assign_ex = strip_operator(assign_ex, s)
@@ -641,7 +658,21 @@ class CreateBodyParser:
 				else:
 					print('error - not supported')
 
-
+		def _add_extend_to_for_loop_list(va, vus, offset):
+			var_type = self.var_agg_map[va]['op']
+			group_by = self.var_agg_map[va]['group_by']
+			vu_list = "["+vus.replace('|', ',')+"]"
+			self.for_loop_list.append((offset, f"""extend_by = {group_by}"""))
+			self.for_loop_list.append((offset, """collect_by = """+ vu_list))
+			self.for_loop_list.append((offset,f"""for var in collect_by:"""))
+			self.for_loop_list.append((offset,f"""    if var not in {va}.setdefault(var, []):"""))
+			self.for_loop_list.append((offset,f"""         {va}[var].append(var)"""))
+			self.for_loop_list.append((offset,f"""    if var != extend_by:"""))
+			self.for_loop_list.append((offset,f"""        if var not in {va}.setdefault(extend_by, []):"""))
+			self.for_loop_list.append((offset,f"""            {va}[extend_by].extend({va}[var])"""))
+			self.for_loop_list.append((offset,f"""        for var_items in {va}[var]:"""))
+			self.for_loop_list.append((offset,f"""            {va}[var_items] = {va}[extend_by]"""))
+				
 		def _check_group_by_repeat(va, tmp_var_loop_set, offset):
 			for g_var, g_val in self.var_agg_map.items():
 				if g_val['op'] not in ['sum',  'collect list']:
@@ -693,6 +724,14 @@ class CreateBodyParser:
 								for r, v_list in self.result_value_list.items():
 									if c_v not in self.value_list and c_v in v_list:
 										self.r_tuple[r] = self.r_tuple.setdefault(r, '') + f"""'{c_v}':{c_v},"""
+						if str_in(' extend by ',vu):
+							vu, c_vu = split(vu, ' extend by ')
+							c_vu = c_vu.strip( "')','('").split(',')
+							for c_v in c_vu:
+								c_v = c_v.strip()
+								for r, v_list in self.result_value_list.items():
+									if c_v not in self.value_list and c_v in v_list:
+										self.r_tuple[r] = self.r_tuple.setdefault(r, '') + f"""'{c_v}':{c_v},"""
 						vu = vu.strip()
 						if str_in(' where ', vu):
 							vu, vu_if = split(vu, ' where ')
@@ -713,24 +752,47 @@ class CreateBodyParser:
 						offset += 4
 
 					if tmp_collect:
-						if vu_if:
-							self.for_loop_list.append((offset, f"""if _{va}_flag == True and {vu_if}:"""))
-						else:
-							self.for_loop_list.append((offset, f"""if _{va}_flag == True:"""))
-						
-						_add_collect_to_for_loop_list(va, vu.split('|'), offset+4)
-						group_by = self.var_agg_map[va]['group_by']
-						self.for_loop_list.append((offset, f"""{va}_group_by_str=str({group_by})"""))
-						if ',' in group_by:
+						def put_collect_aggregate():
+							if vu_if:
+								self.for_loop_list.append((offset, f"""if _{va}_flag == True and {vu_if}:"""))
+							else:
+								self.for_loop_list.append((offset, f"""if _{va}_flag == True:"""))
+							
+							_add_collect_to_for_loop_list(va, vu.split('|'), offset+4)
+							group_by = self.var_agg_map[va]['group_by']
+							self.for_loop_list.append((offset, f"""{va}_group_by_str=str({group_by})"""))
+							if ',' in group_by:
+								tmp = '{%s_group_by_str}'%va
+							else:
+								tmp = '"{%s_group_by_str}"'%va
+							for r, v_list in self.result_value_list.items():
+								if va in v_list:
+									if self.var_agg_map[va]['op'] in ['collect set', 'collect list']:
+										self.r_tuple[r] = self.r_tuple.setdefault(r, '') + f"""'{va}':f'{va}.get({tmp}, [])',"""
+									else:
+										self.r_tuple[r] = self.r_tuple.setdefault(r, '') + f"""'{va}':f'{va}.get({tmp}, 0)',"""
+						def put_collect_extend():
+							if vu_if:
+								self.for_loop_list.append((offset, f"""if _{va}_flag == True and {vu_if}:"""))
+							else:
+								self.for_loop_list.append((offset, f"""if _{va}_flag == True:"""))
+							
+							_add_extend_to_for_loop_list(va, vu, offset+4)
+							group_by = self.var_agg_map[va]['group_by']
+							self.for_loop_list.append((offset, f"""{va}_group_by_str=str({group_by})"""))
 							tmp = '{%s_group_by_str}'%va
+
+							for r, v_list in self.result_value_list.items():
+								if va in v_list:
+									eval_str =  f"""path[{tmp}] if path.get({tmp}, []) and {tmp} == path[{tmp}][0] else []"""
+									self.r_tuple[r] = self.r_tuple.setdefault(r, '') + f"""'{va}':f'{eval_str}',"""
+									
+						if self.var_agg_map[va]['agg_op'] == 'aggregate':
+							put_collect_aggregate()
 						else:
-							tmp = '"{%s_group_by_str}"'%va
-						for r, v_list in self.result_value_list.items():
-							if va in v_list:
-								if self.var_agg_map[va]['op'] in ['collect set', 'collect list']:
-									self.r_tuple[r] = self.r_tuple.setdefault(r, '') + f"""'{va}':f'{va}.get({tmp}, [])',"""
-								else:
-									self.r_tuple[r] = self.r_tuple.setdefault(r, '') + f"""'{va}':f'{va}.get({tmp}, 0)',"""
+							put_collect_extend()
+
+
 					else:
 						if vu_if:
 							self.for_loop_list.append((offset, f"""if {vu_if}:"""))
@@ -976,6 +1038,7 @@ def ToPaser(fn, text):
 		f = f.strip()
 		d = d.strip()
 		r += f'\nwrite_json_file(f"{f}", {d});'
+		# r += f'\ndraw_conn({d});'
 	return r
 
 def CreatePaser(fn, text):
@@ -1264,3 +1327,4 @@ def main():
 
 if __name__=="__main__":
     main()
+

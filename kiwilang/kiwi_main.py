@@ -784,7 +784,7 @@ class CreateBodyParser:
 
 							for r, v_list in self.result_value_list.items():
 								if va in v_list:
-									eval_str =  f"""path[{tmp}] if path.get({tmp}, []) and {tmp} == path[{tmp}][0] else []"""
+									eval_str =  f"""{va}[{tmp}] if {va}.get({tmp}, []) and {tmp} == {va}[{tmp}][0] else []"""
 									self.r_tuple[r] = self.r_tuple.setdefault(r, '') + f"""'{va}':f'{eval_str}',"""
 									
 						if self.var_agg_map[va]['agg_op'] == 'aggregate':
@@ -1022,7 +1022,7 @@ def list_strip(l):
 
 def FromPaser(fn, text):
 	text = strip_prefix(text, ['read'])
-	l = list_strip(text.split(","))
+	l = list_strip(text.split(";"))
 	r = ''
 	for fl in l:
 		f, s = split(fl, ' as ')
@@ -1031,7 +1031,7 @@ def FromPaser(fn, text):
 
 def ToPaser(fn, text):
 	text = strip_prefix(text, ['write'])
-	text_list = text.split(',')
+	text_list = text.split(';')
 	r = ''
 	for text_t in text_list:
 		f, d = split(text_t, ' from ')

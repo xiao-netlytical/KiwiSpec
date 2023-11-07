@@ -2,8 +2,8 @@ define conn_path=../sample_data/zeek, write_path=../sample_data/result,
 application_path=../rules/application, output_path=../sample_data/result
 
 # get all ther unidentified servers and the protocols recieved
-READ conn_path/conn.json AS flows, 
-write_path/clean_ip_to_servers.json as ip_servers,
+READ conn_path/conn.json AS flows; 
+write_path/clean_ip_to_servers.json as ip_servers;
 application_path/proto_desciption.json as proto_disc
 create {d_ip:protos} as r
 var i select
@@ -16,8 +16,8 @@ write write_path/unidentified_server_and_proto.json from r
 
 ####################
 # group the unidentified servers and the protocols recieved
-READ conn_path/conn.json AS flows, 
-write_path/clean_ip_to_servers.json as ip_servers,
+READ conn_path/conn.json AS flows; 
+write_path/clean_ip_to_servers.json as ip_servers;
 application_path/proto_desciption.json as proto_disc
 create {disc: {"s_ips": ips, "c_ips": c_ips}} as r
 var i select
@@ -34,9 +34,9 @@ write write_path/unidentified_servers.json from r
 
 ####################
 # get all the protocols which is  not identified server supported protocol
-READ conn_path/conn.json AS flows, 
-write_path/clean_ip_to_servers.json as ip_servers, 
-application_path/app_proto.json as proto_list,
+READ conn_path/conn.json AS flows; 
+write_path/clean_ip_to_servers.json as ip_servers; 
+application_path/app_proto.json as proto_list;
 application_path/proto_desciption.json as proto_disc
 create {d_ip: serv_protos} as ser_protos
 VAR i, SELECT
@@ -58,10 +58,10 @@ write write_path/abnormal_proto_to_server.json from r
 
 ####################
 # baseline server to server communication
-READ write_path/clean_ip_to_servers.json AS srvs, 
-write_path/clean_server_to_ips.json AS ips,
-conn_path/conn.json AS flows, 
-application_path/app_proto.json as proto_list,
+READ write_path/clean_ip_to_servers.json AS srvs; 
+write_path/clean_server_to_ips.json AS ips;
+conn_path/conn.json AS flows; 
+application_path/app_proto.json as proto_list;
 application_path/proto_desciption.json as proto_disc
 
 CREATE [{"s_srv":s_srv, "d_srv":d_srv, "protos": proto, "disc": disc, "src_count": s_srv_c, "dst_count": d_srv_c, "s_count": s_count, "d_count":d_count}] AS r
@@ -84,10 +84,10 @@ WRITE write_path/baseline_server_to_server_traffic.json FROM r
 
 ####################
 # find failed (no reponse, rejected) traffic between servers
-READ write_path/clean_ip_to_servers.json AS srvs, 
-write_path/clean_server_to_ips.json AS ips,
-conn_path/conn.json AS flows, 
-application_path/app_proto.json as proto_list,
+READ write_path/clean_ip_to_servers.json AS srvs; 
+write_path/clean_server_to_ips.json AS ips;
+conn_path/conn.json AS flows; 
+application_path/app_proto.json as proto_list;
 application_path/proto_desciption.json as proto_disc
 
 CREATE [{"s_srv":s_srv, "d_srv":d_srv, "protos": proto, "disc": disc, "rej_count": rej_count, "permit_count": permit_count, "app_proto":app_proto,  "src_count": s_srv_c, "dst_count": d_srv_c, "s_count": s_count, "d_count":d_count}] AS r
@@ -115,7 +115,7 @@ WRITE write_path/server_to_server_reject_proto.json FROM r
 
 ####################
 # total identified server count, client count, and unidentified service workload count
-READ conn_path/conn.json AS flows,
+READ conn_path/conn.json AS flows;
 write_path/clean_ip_to_servers.json AS srvs
 CREATE ips AS s_ips
 VAR i SELECT 
@@ -141,15 +141,17 @@ len(c_ips) as a2;
 len(srvs.keys()) as a3;
 {"a1":a1, "a2":a2, "a3":a3} as c
 
-WRITE write_path/server_ips.json FROM s_ips, write_path/client_ips.json FROM c_ips, write_path/unidentified_s_ips.json from u_s_ips,
+WRITE write_path/server_ips.json FROM s_ips;
+write_path/client_ips.json FROM c_ips; 
+write_path/unidentified_s_ips.json from u_s_ips;
 write_path/count.json from count
 
 ####################
 #explor traffic proto
-READ write_path/clean_ip_to_servers.json AS srvs, 
-write_path/clean_server_to_ips.json AS ips,
-conn_path/conn.json AS flows, 
-application_path/app_proto.json as proto_list,
+READ write_path/clean_ip_to_servers.json AS srvs; 
+write_path/clean_server_to_ips.json AS ips;
+conn_path/conn.json AS flows; 
+application_path/app_proto.json as proto_list;
 application_path/proto_desciption.json as proto_disc
 
 CREATE [{"s_srv":s_srv, "d_srv":d_srv, "protos": proto, "disc": disc, "rej_count": rej_count, "permit_count": permit_count, "app_proto":app_proto,  "src_count": s_srv_c, "dst_count": d_srv_c, "s_count": s_count, "d_count":d_count}] AS r
@@ -191,10 +193,10 @@ WRITE write_path/server_to_server_permit_rules.json FROM p_rule
 
 ####################
 # none server permit rules
-READ write_path/clean_ip_to_servers.json AS srvs, 
-write_path/clean_server_to_ips.json AS ips,
-conn_path/conn.json AS flows, 
-application_path/app_proto.json as proto_list,
+READ write_path/clean_ip_to_servers.json AS srvs; 
+write_path/clean_server_to_ips.json AS ips;
+conn_path/conn.json AS flows; 
+application_path/app_proto.json as proto_list;
 application_path/proto_desciption.json as proto_disc
 
 CREATE [{"src":src, "dst":dst, "proto": proto, "disc": disc}] AS r
@@ -236,11 +238,11 @@ WRITE write_path/agg_permit_rules.json FROM r2
 
 ##########
 # explore protocols which is not used to identify a supported known server
-READ output_path/clean_ip_to_servers.json AS srvs, 
-output_path/clean_server_to_ips.json AS ips,
-conn_path/conn.json AS flows, 
-application_path/app_proto.json as proto_list,
-application_path/proto_desciption.json as proto_disc,
+READ output_path/clean_ip_to_servers.json AS srvs; 
+output_path/clean_server_to_ips.json AS ips;
+conn_path/conn.json AS flows; 
+application_path/app_proto.json as proto_list;
+application_path/proto_desciption.json as proto_disc;
 application_path/app_proto.json as app_protos
 
 create t_protos as a_protos
@@ -266,9 +268,9 @@ proto not in a_protos; disc and disc != "Unknown"
 WRITE output_path/proto_discover.json FROM r	
 ############################
 # Explore call TCP-139
-READ output_path/ip_to_servers.json AS srvs, 
-output_path/server_to_ips.json AS ips,
-conn_path/conn.json AS flows, 
+READ output_path/ip_to_servers.json AS srvs; 
+output_path/server_to_ips.json AS ips;
+conn_path/conn.json AS flows; 
 application_path/proto_desciption.json as proto_disc
 CREATE [{"s_ip":s_ip, "d_ip":d_ip, "s_srv":s_srvs, "d_srv":d_srvs, "disc":disc }] AS r
 VAR i SELECT
@@ -293,12 +295,12 @@ WRITE output_path/potential_bad_calls.json from r
 #aggregate all the clients to clients for per protocol
 #aggregate all the clients to a server with identified server port and none server port
 
-READ output_path/clean_ip_to_servers.json AS srvs, 
-output_path/clean_server_to_ips.json AS ips,
-conn_path/conn.json AS flows, 
-application_path/app_proto.json as app_proto,
-application_path/proto_desciption.json as proto_disc,
-application_path/app_proto.json as app_protos,
+READ output_path/clean_ip_to_servers.json AS srvs; 
+output_path/clean_server_to_ips.json AS ips;
+conn_path/conn.json AS flows; 
+application_path/app_proto.json as app_proto;
+application_path/proto_desciption.json as proto_disc;
+application_path/app_proto.json as app_protos;
 output_path/clean_server_to_ips.json as ips
 
 create srv as srv_list
@@ -394,17 +396,13 @@ VAR i SELECT
 WRITE write_path/deny_traffic_agg.json FROM r
 
 ####################
-#READ conn.json AS flows, server.json AS srv
-#VAR i 
-#SELECT
-#flows[i]["id.orig_h"] AS src_ip where is_internet_ip(src_ip);
-
-#create [x] as path_recording WHERE x in srv.keys() and x != src_ip
-#REPEAT(LAMBDA x=src_ip:dst_ip:limit 5
-#        VAR j 
-#        flows[j][“id.resp_h”] AS dst_ips                           
-#        WHERE flows[j][“id.resp_p”] == 3389 AND flows[j][“id.orig_h"] == x)
-
-#with all path_recording
-#CREATE {src_ip: [path_recording]} AS result
-#WRITE path_recording.json FROM result
+READ conn_path/conn.json AS flows; output_path/ip_to_servers.json AS srv
+create   [path_recording] as result
+var i, j select
+    flows[i]["id.orig_h"] AS s_ip_1;
+    flows[i]["id.resp_h"] AS d_ip_1;
+    flows[j]["id.orig_h"] AS s_ip_2;
+    flows[j]["id.resp_h"] AS d_ip_2;
+    collect set ((s_ip_1, d_ip_1), (s_ip_2, d_ip_2)) extend by (s_ip_1, d_ip_1) as path_recording;
+where flows[i]["id.resp_p"] == 3389; flows[j]["id.resp_p"] == 3389
+WRITE output_path/path_recording.json FROM result

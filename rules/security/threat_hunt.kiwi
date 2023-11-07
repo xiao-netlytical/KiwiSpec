@@ -28,11 +28,11 @@ VAR i SELECT
     where flows[i]["local_orig" | True] and flows[i]["local_resp" | True];    
     flows[i]["conn_state"] in ["S0", "REJ"];
     ORDER BY dhost_c DESC LIMIT 10 FOR r2;  dport_c DESC LIMIT 10 FOR r1
-write write_path/top_sender_dport.json from r1, 
+write write_path/top_sender_dport.json from r1; 
 	  write_path/top_sender_dhost.json from r2
 
 #longest connection, or concatenated connections limit 100
-READ read_path AS flows, 
+READ read_path AS flows; 
 write_path/ip_to_servers.json as srv_names
 CREATE [{"src":s_ip, "dst":d_ip, "srv":proto, "flows": ct, "duration":dur}] AS r
 VAR i SELECT
@@ -48,7 +48,7 @@ var i set
 WRITE write_path/top_duration.json from r
 
 #Extrafiltration, get top sending bytes in total and top sending count in tatal between two paire, the resule should be sorted and limited to top 10
-read read_path as flows, write_path/ip_to_servers.json as srv_names
+read read_path as flows; write_path/ip_to_servers.json as srv_names
 CREATE [{"src":s_ip, "dst":d_ip, "orig_pkts": orig_pkts}] AS r1 ;
        [{"src":s_ip, "dst":d_ip, "orig_bytes": orig_bytes}] AS r2  
 VAR i SELECT
@@ -63,7 +63,7 @@ update var i set
 update var i set
     r2[i]["server"] as srv_names[r2[i]["src"] | []]
 
-write write_path/top_bytes_sender.json from r2, 
+write write_path/top_bytes_sender.json from r2; 
 	  write_path/top_pkts_sender.json from r1
 
 # Beacons - Get connections start with regular intervals
@@ -78,7 +78,7 @@ var i  select
 write write_path/top_consistent_interval.json from r
 
 # DNS - As channel
-read read_dns_path as flows, 
+read read_dns_path as flows; 
 write_path/ip_to_servers.json as srv_names
 create [{"src":s_ip, "base_domain":domain, "requests": ct}] as r
 var i  select 
@@ -90,7 +90,7 @@ update r var i set
     r[i]["server"] as srv_names[r[i]["src"] | []]
  write write_path/dns_domain_requests.json from r   
 
-read write_path/top_duration.json as top_dur_ip, write_path/top_bytes_sender.json as top_byte_ip
+read write_path/top_duration.json as top_dur_ip; write_path/top_bytes_sender.json as top_byte_ip
 create {s_ip_1: srv} as r
 var i, j select
     top_byte_ip[i]["src"] as s_ip_1;
@@ -98,4 +98,3 @@ var i, j select
     top_dur_ip[j]["src"] as s_ip_2;
 where s_ip_1 == s_ip_2
 WRITE write_path/top_duration_and_out_byte.json from r
-

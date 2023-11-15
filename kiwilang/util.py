@@ -61,6 +61,8 @@ def eval_logic_expr(logic_input, input):
     exec(logic_b + input_b + r, globals())
     return rst
 
+
+
 def get_application_protocol(logic_input):
     if logic_input.strip() =='':
         return []
@@ -81,6 +83,55 @@ def index_by(*args):
 def init_util():
     global _index_by
     _index_by = {}
+
+def find_matching_parenthesis(expression):
+    count = 0
+    s = 0
+    for i, char in enumerate(expression):
+        if char == '(':
+            if count == 0:
+                s = i
+            count += 1
+        elif char == ')':
+            count -= 1
+            if count == 0:
+                return (s, i)
+    return None
+
+
+def collect_eval(input_string, input_p):
+    result_str = ''
+    tmp_result_str = ''
+    process_str = input_string
+    exec(input_p, globals())
+    def find_and_eval_first_unit(input_string):
+        unit = input_string.find("unit")
+        if (unit == -1):
+            return -1, -1, -1
+        next = unit + len("unit")
+        start, end = find_matching_parenthesis(input_string[next:])
+        eval_result = eval(input_string[next+start:next+end+1])
+        return eval_result, unit, next+end
+
+    while (process_str):
+        r, start, end = find_and_eval_first_unit(process_str)
+        if r == -1:
+            result_str += process_str
+            tmp_result_str += process_str
+            break
+        if r:
+            result_str += process_str[:start] + " True "
+            tmp_result_str += process_str[:start] + " True "
+            process_str = process_str[end+1:]
+        else:
+            result_str += process_str[:end+1]
+            tmp_result_str += process_str[:start] + " False "
+            process_str = process_str[end+1:]
+
+
+    r = eval(tmp_result_str)
+    return  r, result_str
+
 
 def draw_conn(result):
     import networkx as nx

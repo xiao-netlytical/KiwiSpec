@@ -7,8 +7,12 @@ import functools
 def strip_operator(s, pre_list):
 	for ss in pre_list:
 		if s.lower().startswith(ss):
-			new_s = s[len(ss):]
-			return new_s.strip()[1:-1]
+			new_s = s[len(ss):].strip()
+			if new_s.startswith('('):
+				new_s = new_s[1:]
+			if new_s.endswith(')'):
+				new_s = new_s[:-1]
+			return new_s
 	return s
 
 def strip_prefix(s, pre_list):
@@ -586,9 +590,24 @@ class CreateBodyParser:
 									   'group_by': 'default_group_by',
 									   'agg_op': 'aggregate'}
 					group_by_var = self.group_by_var
+				assign_ex = strip_operator(assign_ex.strip(), s)
 				assign_ex = assign_ex.strip()
-				assign_ex = strip_operator(assign_ex, s)
-				assign_ex = assign_ex.strip()
+			elif 'collect eval' in assign_ex:
+				assign_ex_list = strip_operator(assign_ex.strip(), ['collect eval']).split(',')
+				assign_ex = assign_ex_list[0]
+				local_assign_ex = ','.join(assign_ex_list[1:])
+				local_assign_expr = list_strip(re.split("[+,-,*,/,%,^,!,=,(,),' ',',','{','}']", local_assign_ex))
+				var_map_list = {}
+				for expr in local_assign_expr:
+					lexer = BodyLexer(self.fn, expr)
+					tokens = lexer.make_tokens()
+					_, _, var_map, _ = get_access_maps(tokens, self.var_list, self.value_list)
+					for k,v in var_map.items():
+						var_map_list[k] = v
+				self.var_agg_map[assign_value] = {'op':'collect eval',
+									'group_by': var_map_list,
+									'agg_op': 'eval'}
+
 			else:
 				self.group_by_var.add(assign_value)
 
@@ -736,7 +755,7 @@ class CreateBodyParser:
 						if str_in(' where ', vu):
 							vu, vu_if = split(vu, ' where ')
 
-						vu = strip_operator(vu, ['collect list', 'collect set', 'count distinct',
+						vu = strip_operator(vu.strip(), ['collect list', 'collect set', 'count distinct',
 												 'min', 'max', 'sum'])
 						if str_in(' from ', vu):
 							vu, _ = split(vu, " from ")
@@ -757,7 +776,6 @@ class CreateBodyParser:
 								self.for_loop_list.append((offset, f"""if _{va}_flag == True and {vu_if}:"""))
 							else:
 								self.for_loop_list.append((offset, f"""if _{va}_flag == True:"""))
-							
 							_add_collect_to_for_loop_list(va, vu.split('|'), offset+4)
 							group_by = self.var_agg_map[va]['group_by']
 							self.for_loop_list.append((offset, f"""{va}_group_by_str=str({group_by})"""))
@@ -771,28 +789,47 @@ class CreateBodyParser:
 										self.r_tuple[r] = self.r_tuple.setdefault(r, '') + f"""'{va}':f'{va}.get({tmp}, [])',"""
 									else:
 										self.r_tuple[r] = self.r_tuple.setdefault(r, '') + f"""'{va}':f'{va}.get({tmp}, 0)',"""
+
 						def put_collect_extend():
 							if vu_if:
 								self.for_loop_list.append((offset, f"""if _{va}_flag == True and {vu_if}:"""))
 							else:
 								self.for_loop_list.append((offset, f"""if _{va}_flag == True:"""))
-							
 							_add_extend_to_for_loop_list(va, vu, offset+4)
 							group_by = self.var_agg_map[va]['group_by']
 							self.for_loop_list.append((offset, f"""{va}_group_by_str=str({group_by})"""))
 							tmp = '{%s_group_by_str}'%va
-
 							for r, v_list in self.result_value_list.items():
 								if va in v_list:
 									eval_str =  f"""{va}[{tmp}] if {va}.get({tmp}, []) and {tmp} == {va}[{tmp}][0] else []"""
 									self.r_tuple[r] = self.r_tuple.setdefault(r, '') + f"""'{va}':f'{eval_str}',"""
-									
+
+						def put_collect_eval():
+							local_offset=offset
+							self.for_loop_list.append((local_offset, f"{va} = False"))
+							exs = strip_operator(vu.strip(), ['collect eval'])
+							exs_list = exs.split(',')
+							self.for_loop_list.append((offset, f'logic_ex = {exs_list[0]}'))
+
+							for v_key, v_value in self.var_agg_map[va]['group_by'].items():
+								self.for_loop_list.append((local_offset, f'for {v_key} in {v_value}.keys() if isinstance({v_value}, dict) else range(len({v_value})):'))
+								local_offset += 4
+
+							self.for_loop_list.append((local_offset, "input_p = ''"))
+							for ex in exs_list[1:]:
+								ex_l, ex_r = list_strip(ex.split('='))
+								self.for_loop_list.append((local_offset, f'input_p += f"""{ex_l} = "{{{ex_r}}}";""" if isinstance({ex_r}, str) else f"""{ex_l} = {{{ex_r}}};"""'))
+							self.for_loop_list.append((local_offset, f'{va}, logic_ex = collect_eval(logic_ex, input_p)'))
+							while (local_offset != offset):
+								self.for_loop_list.append((local_offset, f'if {va}:break'))
+								local_offset -= 4
+
 						if self.var_agg_map[va]['agg_op'] == 'aggregate':
 							put_collect_aggregate()
-						else:
+						elif self.var_agg_map[va]['agg_op'] == 'extend':
 							put_collect_extend()
-
-
+						elif self.var_agg_map[va]['agg_op'] == 'eval':
+							put_collect_eval()
 					else:
 						if vu_if:
 							self.for_loop_list.append((offset, f"""if {vu_if}:"""))
@@ -1325,6 +1362,6 @@ def main():
 		print(f"File {filename} not found")
 		sys.exit(1)
 
+
 if __name__=="__main__":
     main()
-

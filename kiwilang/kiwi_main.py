@@ -798,7 +798,10 @@ class CreateBodyParser:
 							_add_extend_to_for_loop_list(va, vu, offset+4)
 							group_by = self.var_agg_map[va]['group_by']
 							self.for_loop_list.append((offset, f"""{va}_group_by_str=str({group_by})"""))
-							tmp = '{%s_group_by_str}'%va
+							if ',' in group_by:
+								tmp = '{%s_group_by_str}'%va
+							else:
+								tmp = '"{%s_group_by_str}"'%va
 							for r, v_list in self.result_value_list.items():
 								if va in v_list:
 									eval_str =  f"""{va}[{tmp}] if {va}.get({tmp}, []) and {tmp} == {va}[{tmp}][0] else []"""

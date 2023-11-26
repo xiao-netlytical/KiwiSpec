@@ -83,7 +83,7 @@ VAR i select
     service_name["service"][i]["Transport Protocol"].upper()+"_"+service_name["service"][i]["Port Number"] as proto;
     collect set(service_name["service"][i]["Description"]) as disc
 
-create {i:disc} as r    
-var i select
-     ",".join(r1[i]) as disc
-WRITE app_define/proto_desciption.json FROM r
+update var i set
+r1[i]  as ",".join(r1[i])
+WRITE app_define/proto_desciption.json FROM r1
+

@@ -8,7 +8,6 @@ read read_path as flows
 CREATE [{"source": source, "dport":dport, "dhost": dhost}] as r
 VAR i SELECT
     flows[i]["id.orig_h"] as source;
-    flows[i]["id.orig_h"] as source;
     COLLECT SET(flows[i]["id.resp_h"]) as  dhost;
     COLLECT SET(flows[i]["id.resp_p"]) as  dport;
     where flows[i]["local_orig" | True] and flows[i]["local_resp" | True];    
@@ -28,6 +27,9 @@ VAR i SELECT
     where flows[i]["local_orig" | True] and flows[i]["local_resp" | True];    
     flows[i]["conn_state"] in ["S0", "REJ"];
     ORDER BY dhost_c DESC LIMIT 10 FOR r2;  dport_c DESC LIMIT 10 FOR r1
+
+UPDATE VAR i set
+r1[i]["dport"] AS ",".join(str(r1[i]["dport"]))
 write write_path/top_sender_dport.json from r1; 
 	  write_path/top_sender_dhost.json from r2
 

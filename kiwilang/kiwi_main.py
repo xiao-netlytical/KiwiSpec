@@ -1078,7 +1078,15 @@ def ToPaser(fn, text):
 		f = f.strip()
 		d = d.strip()
 		r += f'\nwrite_json_file(f"{f}", {d});'
-		# r += f'\ndraw_conn({d});'
+	return r
+
+def DrawPaser(fn, text):
+	text = strip_prefix(text, ['draw'])
+	text_list = text.split(';')
+	r = ''
+	for text_t in text_list:
+		f = text.strip()
+		r += f'\ndraw_conn({f});'
 	return r
 
 def CreatePaser(fn, text):
@@ -1221,7 +1229,7 @@ def parser_get_query_list(text, boundary, follows=[], multi=False):
 	return query_list
 
 def QueryParser(fn, text):
-	boundary = ['create', 'with', 'read', 'write', 'update']
+	boundary = ['create', 'with', 'read', 'write', 'update', 'draw']
 	query_list = parser_get_query_list(text, boundary)
 
 	result_list = []
@@ -1234,6 +1242,8 @@ def QueryParser(fn, text):
 			continue
 		if q.lower().startswith('write'):
 			result_list.append(ToPaser(fn, q))
+		if q.lower().startswith('draw'):
+			result_list.append(DrawPaser(fn, q))
 		if q.lower().startswith('create'):
 			unit_r, unit_v = CreatePaser(fn, q)
 			result_list.append(unit_r)

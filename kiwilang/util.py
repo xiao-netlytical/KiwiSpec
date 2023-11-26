@@ -22,9 +22,12 @@ def is_internet_ip(ip):
 
 from datetime import datetime
 def epoch_time(t):
-    dt =datetime.strptime(t.split('.')[0], '%Y-%m-%dT%H:%M:%S')
-    return dt.timestamp()
-
+    try:
+        dt =datetime.strptime(str(t).split('.')[0], '%Y-%m-%dT%H:%M:%S')
+        return dt.timestamp()
+    except:
+        return int(t)
+    
 def _eval_logic_fix_range(logic_range, input):
     range_unit = {}
     input_unit = []
@@ -133,15 +136,15 @@ def collect_eval(input_string, input_p):
     return  r, result_str
 
 
-def draw_conn(result):
+def draw_conn(connections):
     import networkx as nx
     import matplotlib.pyplot as plt
 
     # Define your list of point-to-point connections as tuples (source, target)
 
-    connections = []          
-    for i in result:
-        connections.extend(i)
+    # connections = []          
+    # for i in result:
+        # connections.extend(i)
 
     # Create a directed graph
     G = nx.DiGraph()
@@ -156,7 +159,7 @@ def draw_conn(result):
     layout = nx.spring_layout(G)
 
     # Draw the graph
-    nx.draw(G, layout, with_labels=True, node_size=500, node_color='lightblue', font_size=5, font_color='black', font_weight='bold', arrows=True, connectionstyle="arc3,rad=0.2")
+    nx.draw(G, layout, with_labels=True, node_size=500, node_color='lightblue', font_size=5, font_color='black', font_weight='bold', arrows=True, connectionstyle="arc3,rad=0.1")
     plt.title("Point-to-Point Link Graph")
     plt.axis('off')  # Turn off the axis
     plt.show()

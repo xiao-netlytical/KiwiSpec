@@ -1,7 +1,7 @@
 define conn_path=../sample_data/zeek, write_path=../sample_data/result
 
 # get a list of all the workloads ip addreses
-READ write_path/server.json AS srv; conn_path/conn.json AS flows
+READ write_path/ip_to_servers.json AS srv; conn_path/conn.json AS flows
 CREATE ips AS r
 VAR i SELECT
     COLLECT SET(flows[i]["id.resp_h"] | flows[i]["id.orig_h"]) AS ips
@@ -9,7 +9,7 @@ WRITE write_path/workloads.json FROM r
 
 
 # get a list of IP addresses which is not classified as server
-READ write_path/server.json AS srv; write_path/workloads.json AS workloads
+READ write_path/ip_to_servers.json AS srv; write_path/workloads.json AS workloads
 CREATE ips AS r
 VAR i SELECT 
     COLLECT SET(workloads[i]) AS ips;
@@ -18,7 +18,7 @@ WRITE write_path/client_ips.json FROM r
 
 
 # get a list of IP addresses which is classified as server
-READ write_path/server.json AS srv; write_path/workloads.json AS workloads
+READ write_path/ip_to_servers.json AS srv; write_path/workloads.json AS workloads
 CREATE ips AS r
 VAR i SELECT 
     COLLECT SET(workloads[i]) AS ips;
@@ -54,7 +54,7 @@ VAR i SELECT
 WRITE write_path/traffic_agg.json FROM r
 
 # aggregate the connections for each source application and destination application pair
-READ write_path/server.json AS srv; conn_path/conn.json AS flows
+READ write_path/ip_to_servers.json AS srv; conn_path/conn.json AS flows
 CREATE [{"s_srv":s_srv, "d_srv":d_srv, "o_pkts":o_pkts, "r_pkts":r_pkts, "protos": proto}] AS r
 VAR i SELECT
     srv[flows[i]["id.orig_h"]][_] AS s_srv;
@@ -65,7 +65,7 @@ VAR i SELECT
 WRITE write_path/server_to_server_traffic.json FROM r
 
 # for each application, get the list of internet IP addresses accessing the application
-READ write_path/server.json AS srv; conn_path/conn.json AS flows
+READ write_path/ip_to_servers.json AS srv; conn_path/conn.json AS flows
 CREATE {d_srv:ips} AS r
 VAR i SELECT 
     srv[flows[i]["id.resp_h"]][_] AS d_srv;
@@ -74,7 +74,7 @@ VAR i SELECT
 WRITE write_path/server_access_by_internet.json FROM r
 
 # for each application, get the list of internet IP addresses accessed by the application
-READ write_path/server.json AS srv; conn_path/conn.json AS flows
+READ write_path/ip_to_servers.json AS srv; conn_path/conn.json AS flows
 CREATE {s_srv:ips} AS r
 VAR i SELECT 
     srv[flows[i]["id.orig_h"]][_] AS s_srv;  
@@ -83,7 +83,7 @@ VAR i SELECT
 WRITE write_path/server_access_internet.json FROM r
 
 # for each application, count the internet IP addresses accessed by the application and total valum sent
-READ write_path/server.json AS srv; conn_path/conn.json AS flows
+READ write_path/ip_to_servers.json AS srv; conn_path/conn.json AS flows
 CREATE [{"s_srv": s_srv, "out_c": ip_c, "pkts": pkts}] AS r
 VAR i SELECT 
     srv[flows[i]["id.orig_h"]][_] AS s_srv;  

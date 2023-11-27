@@ -1,0 +1,240 @@
+define conn_path=../sample_data/zeek, write_path=../sample_data/result, 
+application_path=../rules/application, output_path=../sample_data/result
+
+# get ip to provided services mapping
+read conn_path/conn.json as flows; application_path/proto_desciption.json as proto_desciption
+create {ip:ports} as r; {ip:apps} as r1
+var i, k select 
+    flows[i]["id.resp_h"] as ip;
+    flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"]) as port;
+    collect set(port) group by ip as ports;
+    collect set(port+":"+proto_desciption[port]) group by ip as apps;
+where port not in ["TCP_443", "TCP_80"];
+flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"] and not flows[i]["proto"].startswith("icmp")
+
+# get ip to services mapping with more than one services
+create {ip:apps} as r2
+var ip select
+    r[ip] as apps; 
+    where len(r[ip]) >= 2
+
+write write_path/ip_to_servers.json from r; write_path/ip_to_apps.json from r1; write_path/ip_to_more_servers.json from r2
+
+# mapping of service to the providers
+read write_path/ip_to_servers.json as ip_srv
+create {srv: ips} as r
+var ip select 
+    ip_srv[ip][_] as srv; 
+    collect set(ip) as ips
+write write_path/server_to_ips.json from r
+
+# mapping of same service group to the providers
+read write_path/ip_to_servers.json as ip_srv
+create {gname: ips} as r
+var ip select 
+    ip_srv[ip] as srvs; 
+    ",".join(sorted(srvs)) as name;
+    "s"+str(index_by(name)) as gname;
+    collect set (ip) group by name as ips
+write write_path/server_group_to_ips.json from r
+
+read write_path/server_group_to_ips.json as s_to_ips
+create {ip: gname} as r
+var gname SELECT
+    s_to_ips[gname][_] as ip
+write write_path/ip_to_server_group.json from r
+
+# get a list of all the workloads ip addreses
+READ write_path/ip_to_servers.json AS srv; conn_path/conn.json AS flows
+CREATE ips AS r
+VAR i SELECT
+    COLLECT SET(flows[i]["id.resp_h"] | flows[i]["id.orig_h"]) AS ips;
+where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"] and not flows[i]["proto"].startswith("icmp")
+WRITE write_path/workloads.json FROM r
+
+# get a list of IP addresses which is classified as service provider
+READ write_path/ip_to_servers.json AS srv; write_path/workloads.json AS workloads
+CREATE ips AS r
+VAR i SELECT 
+    COLLECT SET(workloads[i]) AS ips;
+    WHERE workloads[i] in srv.keys()
+WRITE write_path/servers.json FROM r
+
+# get a list of ip which provide unidentified services
+read write_path/servers.json as servers;
+conn_path/conn.json as flows; 
+application_path/proto_desciption.json as proto_desciption
+
+create {ip:apps} as r 
+var i, k select 
+    flows[i]["id.resp_h"] as ip;
+    flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"]) as port;
+    port+":"+proto_desciption[port] as app;
+    collect set(port+":"+proto_desciption[port]) group by ip as apps;
+where ip not in servers; port in ["TCP_443", "TCP_80"];
+flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"] and not flows[i]["proto"].startswith("icmp")
+WRITE write_path/ip_to_webservers.json FROM r
+
+CREATE ips AS r1
+VAR ip SELECT 
+    COLLECT SET(ip from r[ip]) AS ips;
+WRITE write_path/webservers.json FROM r1
+
+read conn_path/conn.json as flows; 
+write_path/servers.json as servers;
+write_path/webservers.json as webservers
+create ips as r 
+VAR i SELECT 
+    COLLECT SET(flows[i]["id.resp_h"]) as ips;
+where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"] and not flows[i]["proto"].startswith("icmp");
+    flows[i]["id.resp_h"] not in servers and flows[i]["id.resp_h"] not in webservers
+WRITE write_path/unidentified_servers.json FROM r
+
+
+# get client only ips
+READ conn_path/conn.json AS flows
+CREATE ips AS all_servers
+VAR i SELECT
+    COLLECT SET(flows[i]["id.resp_h"]) AS ips;
+where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"] and not flows[i]["proto"].startswith("icmp")
+WRITE write_path/all_servers.json FROM all_servers
+
+READ write_path/workloads.json AS workloads;
+
+CREATE ips AS r
+VAR i SELECT 
+    COLLECT SET(workloads[i]) AS ips;
+    WHERE workloads[i] not in all_servers
+WRITE write_path/clients.json FROM r
+
+
+# get all ther unidentified servers and the protocols recieved
+READ conn_path/conn.json AS flows; 
+write_path/unidentified_servers.json as unknown_server
+create {d_ip:protos} as r
+var i select
+flows[i]["id.resp_h"] AS d_ip;
+collect set(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) as protos;
+where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"] and not flows[i]["proto"].startswith("icmp");
+    d_ip in unknown_server and not flows[i]["proto"].startswith("icmp") 
+write write_path/unidentified_ip_to_protos.json from r
+
+read write_path/unidentified_ip_to_protos.json as unknown_ip_server
+create {srv:ips} as r
+var ip select
+    unknown_ip_server[ip][_] as srv;
+    collect set (ip) as ips
+write write_path/unidentified_proto_to_ips.json from r 
+
+
+# group the unidentified servers
+READ conn_path/conn.json AS flows; 
+write_path/unidentified_servers.json as unknown_servers;
+write_path/webservers.json as web_servers;
+write_path/clients.json as clients
+
+create {s_ip: d_ips} as r1; {d_ip: s_ips} as r2;
+var i select
+flows[i]["id.resp_h"] AS d_ip;
+flows[i]["id.orig_h"] as s_ip;
+collect set(d_ip) group by s_ip as d_ips;
+collect set(s_ip) group by d_ip as s_ips;
+where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"];
+    d_ip in unknown_servers or d_ip in web_servers;
+    s_ip in unknown_servers or s_ip in web_servers; not flows[i]["proto"].startswith("icmp");
+
+create  {d_ip: s_ips} as r3;
+var i select
+flows[i]["id.resp_h"] AS d_ip;
+flows[i]["id.orig_h"] as s_ip;
+collect set(d_ip) group by s_ip as d_ips;
+collect set(s_ip) group by d_ip as s_ips;
+where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"] and not flows[i]["proto"].startswith("icmp");
+    d_ip in unknown_servers or d_ip in web_servers;
+    s_ip in clients; not flows[i]["proto"].startswith("icmp");
+
+
+write write_path/unidentified_server_by_grouping_dst.json from r1;
+write_path/unidentified_server_by_grouping_src.json from r2;
+write_path/unidentified_server_grouping_client.json from r3;
+
+
+read write_path/unidentified_server_by_grouping_dst.json as groups
+
+create {name: g]} as r1
+var i select
+    ",".join(sorted(groups[i])) as group;
+    "g"+str(index_by(group)) as name;
+    collect set(i) group by name as g
+
+write write_path/unidentified_server_groups_same_dst.json from r1
+
+read write_path/unidentified_server_by_grouping_src.json as groups
+
+create {name: g]} as r2
+var i select
+    ",".join(sorted(groups[i])) as group;
+    "g"+str(index_by(group)) as name;
+    collect set(i) group by name as g
+
+write write_path/unidentified_server_groups_same_src.json from r2
+
+read write_path/groups.json as groups;
+write_path/unidentified_server_groups_same_src.json as servers;
+write_path/server_group_to_ips.json as group;
+write_path/ip_to_server_group.json as ip_group;
+write_path/clients.json as clients
+
+create {ip: gp} as service_group
+var i select
+    groups[i][_] as ip;
+    collect set(i) as gp
+
+create [{"src":s_group, "dst":d_group, "protos":protos}] as traffic
+var i select
+    service_group[flows[i]["id.orig_h"]][_] AS s_group;
+    service_group[flows[i]["id.resp_h"]][_] AS d_group;
+    flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"]) AS proto;
+    collect set (proto) group by s_group, d_group as protos;
+#   where d_group == proto and s_group in group
+#where d_group == proto or proto not in service_group[flows[i]["id.resp_h"]]
+
+create [{"src":s_group, "dst":d_group, "protos":protos}] as traffic
+var i select
+    ip_group[flows[i]["id.orig_h"]] AS s_group;
+    ip_group[flows[i]["id.resp_h"]] AS d_group;
+    flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"]) AS proto;
+    collect set (proto) group by s_group, d_group as protos;
+
+create [tr] as traffic_list
+var i select
+    [traffic[i]["src"], traffic[i]["dst"]] as tr
+
+write write_path/ip_to_group.json from service_group; write_path/traffic_list.json from traffic_list
+draw traffic_list
+
+read write_path/unidentified_server_groups_same_src.json as servers;
+write_path/server_group_to_ips.json as server_groups;
+write_path/clients.json as clients
+
+update servers
+var i set
+    servers["client"] as clients;
+    
+
+# get all the protocols which is  not identified server supported protocol
+READ conn_path/conn.json AS flows; 
+write_path/ip_to_apps.json as ser_apps;
+write_path/ip_to_servers.json as ser_protos; 
+write_path/ip_to_server_group.json as ip_server_group
+
+create [{"ip":  d_ip, "srv": apps, "abnormal_proto": protos}] as r
+var i select
+	flows[i]["id.resp_h"] AS d_ip;
+	ser_apps[d_ip] as apps;
+    flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"]) as proto;
+    collect set(flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"])) group by d_ip as protos;
+    where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"];
+	      not flows[i]["proto"].startswith("icmp"); d_ip in ip_server_group.keys(); proto not in ser_protos[d_ip]
+write write_path/abnormal_proto_to_server.json from r
+

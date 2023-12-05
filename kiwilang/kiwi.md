@@ -5,11 +5,11 @@ xiao-netlytical@gmail.com
 
 ## Description:
 
-KiwiSpec is a project that provides a method for specifying data processing logic in a declarative manner. The solution aims to offer a language and a generic platform for specifying data processing logic in a semi-structured format, managing and executing the specifications in KiwiSpec. The interested data processing includes searching and retrieving data with filters, data aggregation, data correlation, data transformation, recursive computation, and trending reports.
+KiwiSpec is a project designed to provide a method for specifying data processing logic in a declarative manner. The solution aims to offer both a language and a generic platform for specifying, managing, and executing data processing logic within the KiwiSpec framework. The data under management adopts a semi-structured JSON format, enhancing its applicability across diverse use cases. Key aspects of data processing include search and retrieval operations with filters, data aggregation, correlation, transformation, global logic matching, recursive matching, and the generation of trending reports.
 
-To build a specification for data processing of semi-structured data, KiwiSpec uses expressions with identifiers representing the possible instantiations in a semi-structured data path to access a data value. Additionally, KiwiSpec provides operators to create more complex computational expressions with conditional logic and sorting. Together, the declarative language and the specification include constructs to build expressions, specify data input sources, create output templates, and build pipelines.
+To construct a specification for processing semi-structured data, KiwiSpec utilizes expressions with identifiers representing possible instantiations in a path to access semi-structured data values. Additionally, KiwiSpec provides operators to create more complex computational expressions with conditional logic, aggregation, limiting, and sorting. Together, the declarative language and the specification include constructs for building expressions, specifying data input, creating output templates, and defining output pipelines.
 
-In addition to the language aspect, the KiwiSpec platform also aims to provide a generic platform to manage, translate, and execute specifications, as well as manage and display outputs.
+Beyond the language aspect, the KiwiSpec platform also aims to serve as a generic platform for managing, translating, and executing specifications, as well as handling and displaying outputs.
 
 Furthermore, KiwiSpec can also be used as an extension to any imperative language. By embedding the declarative specification for data processing into Python code, the data processing logic can be translated to Python code and executed with the rest of the code.
 
@@ -17,9 +17,9 @@ Furthermore, KiwiSpec can also be used as an extension to any imperative languag
 
 The KiwiSpec project was conceived to provide a specification language that can document the data processing logic for applications in areas such as Cyber Asset Attack Surface Management (CAASM), Zero Trust analytics, and threat hunting.
 
-In these applications, the processing of log data and metadata is a critical component in the generation of insights. Products developed in these areas provide users with functionalities to identify critical assets, understand the relationships between workloads and application servers, detect violations, and surface risk factors from traffic logs, configurations, installations, and upgrade logs.
+In these applications, the processing of log data and metadata plays a critical role in deriving valuable insights. Products developed in these areas provide users with functionalities to identify critical assets, understand the relationships between workloads and application servers, detect violations, and surface risk factors from traffic logs, configurations, installations, and upgrade logs.
 
-Creating such applications requires domain expertise to produce valuable insights from the collected data, and the system needs to be kept updated with new learnings. The KiwiSpec project aims to address these needs by providing a language that enables domain experts to document their knowledge and rules easyly, as well as a generic platform capable of managing and interpreting those knowledge and applying them to the collected data.
+Creating such applications requires domain expertise to produce valuable insights from the collected data, and the system needs to be kept updated with new learnings. The KiwiSpec project aims to address these needs by providing a language that enables domain experts to document their knowledge and rules easyily, as well as a generic platform capable of managing and interpreting those knowledge and applying them to the collected data.
 
 The applications in the interested areas have common requirements in terms of data processing. The desired commonality of data processing includes retrieving, searching, filtering, transforming, aggregating, correlating, recursive computing, and trending.
 
@@ -31,15 +31,15 @@ In detail, the data processings can be defined as:
 
 • Transformation: From the selected data, generate output after recomputing.
 
-• Aggregation: Collect a set of data, collect a distinct set, calculate sum, count, count distinct, min, max, mean, all, any, and states grouped by some values.
+• Aggregation: Collect a set of data or distinct set of data, calculate sum, count, count distinct, min, max, mean, all, any, and states grouped by some values.
+
+• Extended aggregation: Collect a set of data or distinct set of data based on computing relationships recursively.
 
 • Correlation: Correlate data entries within the same input or multiple inputs.
 
-• Recursive computation: Compute relationships recursively which match the specified condition along a path.
+• Global logic computation: Compute logic expression from multiple collective data entries.
 
 • Trending: Interval-based aggregation or state calculation with changing or trending reports.
-
-• Projection: Final presentation of the processed data.
 
 ## Specification and Language:
 
@@ -53,18 +53,18 @@ The declarative specification and language should allow domain experts to:
 
 . Focus on describing data processing rules and logic.
 
-. Use a rich language to specify the needed data processing.
+. Use a simple and rich language to specify the needed data processing.
 
 . Use a language that is easy to adopt and understand.
 
 . Write specifications that are easy to read and maintain.
 
 
-To enable domain experts to describe their data processing logic in a declarative manner, the language and specification of KiwiSpec should provide clear ways to specify the source of input data, data filtering and computation logic, output format, and target output storage. KiwiSpec achieves this through five main constructs used to build a declarative specification:
+As a declarative language and platform, the language and specification of KiwiSpec should provide clear ways to specify the source of input data, data filtering and computation logic, output format, and target output storage. KiwiSpec achieves this through five main constructs used to build a declarative specification:
 
 • READ: For reading input data from various sources such as memory, file, cloud storage, and/or database.
 
-• SELECT with condition, sorting, and limiting: For specifying data processing logic. This clause enables users to select and filter data from multiple inputs, transform the data, aggregate and correlate the data, perform recursive computation, and generate trending reports.
+• SELECT with condition, sorting, and limiting: For specifying data processing logic, this construct enables users to select and filter data from multiple inputs, transform the data, aggregate and correlate the data, perform recursive computation, evaluate composite logic expression and generate trending reports.
 
 • CREATE: For building output data structures. This clause enables users to create data structures that are needed for the output.
 
@@ -74,49 +74,350 @@ To enable domain experts to describe their data processing logic in a declarativ
 
 ## Expression and Language:
 
-The fundamental building block of KiwiSpec is expressions and identifiers. A basic expression is a path expression with identifiers in a semi-structured data path to access a data value. Compositional expressions are introduced to build more complex logic. Compositional expressions can be composed from basic or compositional expressions using operators including COLLECT, COLLECT DISTINCT, GROUP BY, ORDER BY, WHERE, CASE/END, LIMIT, SUM, COUNT, COUNT DISTINCT, MIN, MAX, MEAN, ALL, ANY, LAMBDA and REPEAT. Python expressions are also valid expressions. With these operators, expressions can describe the logic of searching with filtering, math and logic computation, aggregation, correlation, transformation and recursive computations. 
+The fundamental building block of KiwiSpec is expressions with identifiers. A basic expression is a path expression with identifiers representing keys and indexes in a semi-structured data path to access a data value. To build more complex logic, Compositional expressions are introduced. Compositional expressions can be composed from basic or compositional expressions using operators including COLLECT, COLLECT DISTINCT, COLLECT EVAL, GROUP BY, EXTEND BY, ORDER BY, WHERE, CASE/END, LIMIT, SUM, COUNT, COUNT DISTINCT, MIN, MAX, MEAN, ALL, and ANY. Python expressions are also valid expressions. With these operators, expressions can describe the logic for searching with filtering, math and logic computation, aggregation, correlation, transformation, composite logic matching and recursive computations. 
 
-By introducing identifiers as placeholders for all the possible instatiations, the declarative language allows users to focus on describing data processing and transformation from input to output, without worrying about walking and manipulating data structures step-by-step.
+With identifiers as placeholders for all the possible instatiations, the declarative language allows users to focus on describing data processing and transformation as expressions, without worrying about walking and manipulating data structures step-by-step.
 
-Expressions can comprise paths accessing data values from multiple data structures. The same identifiers can be used along the path to access values in different levels of the data structures.  An expression accessing a value from one data structure can be used in a path to access another data structure. In these ways, multiple data sources are correlated. The WHERE operator can also be used to correlate multiple data entries or data sources by specifying the relationships between expressions. Different identifiers accessing the same data entry represent different instantiations which can be used to create a correlation between the entries. Relationship definition between entries can be used to build a recursive chain. A lambda operator is used to describe those relationships. An expression built by REPEAT operator with lambda function generates a list of objects along the recursive chain.
+Expressions can comprise paths accessing data values from multiple data structures. The same identifiers can be used to access the same instance with further extensions to different levels of the data structures. An expression accessing a value from one data structure can be used in a path to access another data structure. In these ways, multiple data sources are correlated. The WHERE operator can also be used to correlate multiple data entries or data sources by specifying the relationships between expressions. Different identifiers accessing the same data path represent different instantiations which can be used to create a correlation between the entries. Relationship definition between entries can be used to build a recursive chain. EXTEND BY operator is used to describe those relationships. 
 
-An expression calculated as a true or false value with identifier instantiated can serve as a condition expression. An expression can be followed by a condition keyword and a condition expression to form a compositional expression. An expression with an aggregation operator COLLECT, COLLECT DISTINCT, SUM, COUNT, COUNT DISTINCT, ANY, ALL, MIN, MAX, or MEAN forms an aggregation expression. An aggregation expression can be followed with GROUP BY and ORDER BY keyword with an expression or identifier names. Expression build from COLLECT operator or REPEAT operator will generate a set with or without unique values. An aggregation expression generating a set value as a result can be followed by an ORDER BY keyword to define the order of a set. Multiple expressions with condition operators can be grouped together by CASE operator to form a multi-choice expression.
+A composite logic expression comprises multiple logic units, where the evaluation involves utilizing multiple instances from a dataset. Each instance is independently applied to fulfill any logic unit until the composite expression is satisfied. Some logic expressions related to asset management and security fall into this category. To facilitate the evaluation of composite logic expressions, COLLECT EVAL is introduced. It is passed a composite logic definition along with expressions containing identifiers. The calculated instances from these expressions are used to independently evaluate each logic unit until the collected result aligns with the defined logic.
 
-KiwiSpec borrows several keywords from SQL, including SELECT, WHERE, AS, GROUP BY, and ORDER BY, because they are widely adopted and self-explanatory. In SQL, the SELECT clause implies table row instantiations as the imperative procedure. In KiwiSpec, however, users have more freedom with expressions and identifiers, and the underlying procedures allows any instantiation of identifiers with the calculated expressions. In this way, KiwiSpec offers a more flexibility to specify data manipulation, while still drawing upon familiar and widely used keywords.
+An expression calculated as a true or false value with identifier instantiated can serve as a condition expression. An expression can be followed by a condition keyword and a condition expression to form a compositional expression. An expression with an aggregation operator COLLECT, COLLECT DISTINCT, SUM, COUNT, COUNT DISTINCT, ANY, ALL, MIN, MAX, or MEAN forms an aggregation expression. An aggregation expression can be followed with GROUP BY and ORDER BY keyword with an expression or identifier names. Expression build from COLLECT operator will generate a set with or without unique values. An aggregation expression generating a set value as a result can be followed by an ORDER BY keyword to define the order of a set. Multiple expressions with condition operators can be grouped together by CASE operator to form a multi-choice expression.
 
-In this example, KiwiSpec allows users to specify variables i and j and then select data[i].interest and data[j].interest, where the condition data[i].interest == data[j].interest is met.
+KiwiSpec borrows several keywords from SQL, including SELECT, WHERE, AS, GROUP BY, and ORDER BY, because they are widely adopted and self-explanatory. In SQL, the SELECT clause serves as the imperative procedure for obtaining table row instantiations. In KiwiSpec, however, users have more freedom with expressions and identifiers, and the underlying procedures allows any instantiation of identifiers with the calculated expressions. In this way, KiwiSpec offers a more flexibility to specify data manipulation, while still drawing upon familiar and widely used keywords.
+
+In this example, KiwiSpec allows users to specify identifier variables i and j and then select data[i].interest and data[j].interest, where the condition data[i].interest == data[j].interest is true.
 
     VAR i, j SELECT data[i].interes; data[j].interes; where data[i].interes == data[j].interes
 
 A KiwiSpec specification is made from the constructs of READ, SELECT, WITH, CREATE, and WRITE.
 
-Expressions are specified with SELECT clause are assigned a name with AS or FROM keywords. Expression names can be referred by other expressions or output templates. 
+Expressions specified with SELECT clause are assigned a name with AS or FROM keywords. Expression names can be referred by other expressions or output templates. 
 
-Within the SELECT construct, the WHERE, GROUP BY, or ORDER BY clauses can be used as a separate clause to apply the clause to all the expressions globally.
+Within the SELECT construct, the WHERE, GROUP BY or ORDER BY clauses can be used as a separate clause to apply the clause to all the expressions globally.
 
-A KiwiSpec specification can include a READ clause to specify data sources from a file, storage, a data structure name, or a database.
+A KiwiSpec specification can include a READ construct to specify data sources from a file, storage, a data structure name, or a database.
 
-A kewilang specification can include a WITH cluase to pipeline an output of a specification to an input of another specification.
+A kewilang specification can include a WITH clauses to pipeline an output of a specification to an input of another specification.
 
-A kewilang specification can include a  WRITE clause to specify an output to a file, a storage, a data structure name, or in a database.
+A kewilang specification can include a WRITE construct to specify an output to a file, a storage, a data structure name, or in a database.
 
 
 ## Output Template, Semantics, and Result Generation:
 
-KiwiSpec provides a CREATE construct that allows users to build outputs from expressions. The CREATE construct and clause use templates to define the outputs, which specify how to project the calculated expressions and identifiers as desired by the user. The templates are in semi-structured format and built from expression and identifier names assigned by the SELECT clause. The AS keyword binds an expression to an expression name, while the FROM keyword declares an identifier name for output. All the expressions and identifiers referred to by a template are grouped together to form an expression tuple.
+KiwiSpec provides a CREATE construct that allows users to build outputs from expressions. The CREATE construct and clause use templates to define the outputs, which specify how to project the calculated expressions and identifiers as desired by the user. The templates are in semi-structured format and built from expression names and identifier names assigned by the SELECT clause. The AS keyword binds an expression to an expression name, while the FROM keyword declares an identifier name. All the expressions and identifiers referred by a template are grouped together to form an expression tuple.
 
-The algorithm to generate final outputs based on specifications in KiwiSpec involves two calculation phases.
+The algorithm to generate final outputs from KiwiSpec specifications involves two calculation phases.
 
 The first phase is Identifier Instantiation, Expression Calculation, and Tuple Materialization. 
 
-By instantiating identifiers with valid values, expressions can be materialized. A valid tuple value is formed by a valid set of identifier instantiations and expression calculations that also satisfy the condition clauses. The resulting tuple set is collected as a non-redundant set of all the valid tuple values.
+By instantiating identifiers with valid values, expressions are materialized. A valid tuple value is formed by valid identifier instantiations and valid expression calculations which satisfy the condition clauses. The resulting tuple set is a non-redundant set of all the valid tuple values.
 
-The second phase of the computation is output projection. The final outputs are defined by one or more templates specified in a CREATE clause. Each template specifies how the output should be projected from the resulting tuple set. Since the resulting tuple includes the collection of referred expressions and identifiers, the template can be populated by each tuple value. The whole output set is generated by appending each population of the template.
+The second phase of the computation is output projection. The final outputs are defined by one or more templates specified in a CREATE clause. Each template specifies how the output should be projected from the resulting tuple set. Since the resulting tuple includes the collection of referred expressions names and identifiers, the template can be populated by each tuple value. The whole output set is generated by appending each population of the template.
 
 An interpreter is implemented to convert a specification to executable code. The translated Python code, for example, will execute the above semantics and algorithm. The KiwiSpec interpreter also combines, pipelines, and optimizes the loops with the instantiation and calculation to achieve the best performance.
 
-As a complete solution, a platform is also under development to manage specifications, data sources, and outputs. The platform will provide an interface for plugging in the specifications and scheduling executions of the specifications.
+As a complete solution, a platform is also under development to manage specifications, data sources, and outputs. The platform will provide an interface for loading the specifications and scheduling executions.
 
+## Language Definition
+
+Syntax:
+    DEFINE p1 = directory_path; ...
+    READ p1/file1 as d1 [; p1/file1 as d1;]
+
+    CREATE []|{} AS r1 [;[]|{} AS r2, ...]
+    [VAR ... ] SELECT:
+        e1 [WHERE c1] [GROUP BY i,n1,...] AS name;
+        ...
+        GROUP BY i, ni,...
+        ORDER BY ni DEST LIMIT
+
+    WRITE pi/filei from r1[; pi/filei from r1] 
+
+Between the `READ` and `WRITE` statements, the `CREATE` and `SELECT` statements can be iterated multiple times.
+
+### SELECT statement and Expressions:
+
+SELECT statement is the main component of a wikispec.
+
+The SELECT statement specifies a set of expressions with multiple variables to access various json data structures and assigns the expressions with names. Expressions defines a set of transformed values. By iterating through valid variable instantiations, calculated results from expressions are organized as a set of value tuples.
+
+Syntax:
+[VAR ... ] SELECT
+    e1 as v1;
+    e2 as v2;
+    ....
+
+    [GROUP BY id1, v1,...;]
+    [WHERE ce1; ce2;...]
+    [ORDER BY v1 DESC LIMIT n1 as r1; v2 DESC LIMIT n2 as r2;...]
+
+
+"SELECT" statement includes three sections.
+
+In the main section, expressions are specified and bound to an expression name using 'AS.'
+
+In the second section, conditions and grouping can be defined globally and applied to all the expressions inside a select statement.
+
+In the third section, the 'ORDER BY' and 'LIMIT' can be applied to control the output of the calculated results.
+
+Expressions within SELECT can take the form of path expressions or compositional expressions built from path expressions and other compositional expressions. Operations supported by Python for building an expression are also supported by KiwiSpec. Additionally, KiwiSpec defines a set of operations to build compositional expression.
+
+An expression can only refer the names which already defined in the previous expression assignment. 
+
+
+### VAR clause:
+
+Syntax:
+VAR v1, v2, ...
+
+
+The 'var' clause declares a set of identifiers.
+
+An identifier is a key variable or an index variable that serves as a placeholder in a path for accessing a semi-structured value. An expression with variables in the path is referred to as a path expression. Such a path expression defines a set of values calculated through valid variable instantiations.
+
+"_" can be used as any variable without a declaration.
+
+
+### AS clause:
+
+Syntax:
+    e1 AS n1;
+
+"AS" clause binds an expression to an expression name. Once an expression name is defined, it can be used in the following value expressions, condition expressions and output template.
+
+
+The left of AS is an expression, the right of AS is the bound expression name.
+
+#### "|" operator in a path accessing a json value:
+
+Syntax:
+e[key_or_index | default]
+
+A key or index in an expression can be followed with "|" to set a default value.
+
+When calculating an expression, the generated key or index may be out of range or an invalid access. By default kiwispec will guarantee to only involve valid keys, indexes and values. But user can also define a default value when a invalid key, index or value is generated. 
+
+Example:
+    e["text" | "default text "]
+    a[b[i] | "default value"]
+
+#### index_by function:
+    index_by(expression) is a wikispec function, which returns the next index for a generated value.
+
+### FROM clause:
+Syntax:
+    i from ex[i]
+
+FROM operator declares a variable as a key or index identifier for a specific json structure.
+With FROM clause an expression is specified and the valid instantiations defines the value set.
+
+### COLLECT SET:
+Syntax:
+    COLLECT SET (e1 [|e2]) [WHERE c1;c2;...] [GROUP BY n1, n2, ...]
+
+COLLECT SET is a KiwiSpec operator employed to construct composite expressions.
+
+'COLLECT SET' creates a new expression from the input expressions. An expression specified by 'COLLECT SET' defines a set of lists, each corresponding to a 'group by' group. The values in each list are non-redundant unions of calculated values from the input expressions, achieved by iterating through relevant variable  instantiations associated with the grouping.
+
+A 'WHERE' clause following the COLLECT operator specifies the necessary calculation conditions.
+
+A 'GROUP BY' clause following the COLLECT operator defines the grouping criteria with parameters specified by identifiers and expression names.
+
+If 'GROUP BY' is not present and not defined globally, all non-aggregated parameters are utilized as the grouping parameters.
+
+The option of using 'None' as a parameter indicates no specific grouping.
+
+### COLLECT LIST:
+
+Syntax:
+    COLLECT LIST (e1 [|e2]) [WHERE c1;c2;...] [GROUP BY n1, n2, ...]
+
+COLLECT LIST is a KiwiSpec operator employed to construct composite expressions.
+
+'COLLECT LIST' creates a new expression from the input expressions. An expression specified by 'COLLECT LIST' defines a set of lists, each corresponding to a 'group by' group. The values in each list are unions of calculated values from the input expressions, achieved by iterating through relevant variable instantiations associated with the grouping.
+
+A 'WHERE' clause following the COLLECT operator specifies the necessary calculation conditions.
+
+A 'GROUP BY' clause following the COLLECT operator defines the grouping criteria with parameters specified by identifiers and expression names.
+
+If 'GROUP BY' is not present and not defined globally, all non-aggregated parameters are utilized as the grouping parameters.
+
+The option of using 'None' as a parameter indicates no specific grouping.
+
+### COUNT DISTINCT:
+Syntax:
+    COUNT DISTINCT (e1 [|e2]) [WHERE c1;c2;...] [GROUP BY n1, n2, ...]
+
+COUNT DISTINCT is a KiwiSpec operator employed to construct composite expressions.
+
+'COUNT DISTINCT' creates a new expression from the input expressions. An expression specified by 'COUNT DISTINCT' defines a value for each 'group by' group. The value represents the total count of distinct values obtained from the union of calculated expressions, achieved by iterating through relevant variable instantiations associated with the group.
+
+A 'WHERE' clause following the COLLECT operator specifies the necessary calculation conditions.
+
+A 'GROUP BY' clause following the COLLECT operator defines the grouping criteria with parameters specified by identifiers and expression names.
+
+If 'GROUP BY' is not present and not defined globally, all non-aggregated parameters are utilized as the grouping parameters.
+
+The option of using 'None' as a parameter indicates no specific grouping.
+
+### SUM:
+Syntax:
+    SUM (expression) [WHERE c1;c2;...] [GROUP BY n1, n2, ...]
+
+SUN is a KiwiSpec operator employed to construct composite expressions.
+
+'SUM' create a new expression from the input expression. An expression specified by 'SUM' defines a value for each 'group by' group. The value represents the sum of calculated values from the input expressions, achieved by iterating through relevant variable instantiations associated with the group.
+
+A 'WHERE' clause following the COLLECT operator specifies the necessary calculation conditions.
+
+A 'GROUP BY' clause following the COLLECT operator defines the grouping criteria with parameters specified by identifiers and expression names.
+
+If 'GROUP BY' is not present and not defined globally, all non-aggregated parameters are utilized as the grouping parameters.
+
+The option of using 'None' as a parameter indicates no specific grouping.
+
+### MIN:
+Syntax:
+    MIN (e1 [|e2]) [WHERE c1;c2;...] [GROUP BY n1, n2, ...]
+
+MIN is a KiwiSpec operator employed to construct composite expressions.
+
+'MIN' create a new expression from the input expressions. An expression specified by 'MIN' defines a value for each 'group by' group. The value represents the minimal value obtained from the union of calculated expressions, achieved by iterating through relevant variable instantiations associated with the group.
+
+A 'WHERE' clause following the COLLECT operator specifies the necessary calculation conditions.
+
+A 'GROUP BY' clause following the COLLECT operator defines the grouping criteria with parameters specified by identifiers and expression names.
+
+If 'GROUP BY' is not present and not defined globally, all non-aggregated parameters are utilized as the grouping parameters.
+
+The option of using 'None' as a parameter indicates no specific grouping.
+
+### MAX:
+Syntax:
+    MAX (e1 [|e2]) [WHERE c1;c2;...] [GROUP BY n1, n2, ...]
+
+MAN is a KiwiSpec operator employed to construct composite expressions.
+
+'MAX' create a new expression from the input expressions. An expression specified by 'MAX' defines a value for each 'group by' group. The value represents the maxima value obtained from the union of calculated expressions, achieved by iterating through relevant variable instantiations associated with the group.
+
+A 'WHERE' clause following the COLLECT operator specifies the necessary calculation conditions.
+
+A 'GROUP BY' clause following the COLLECT operator defines the grouping criteria with parameters specified by identifiers and expression names.
+
+If 'GROUP BY' is not present and not defined globally, all non-aggregated parameters are utilized as the grouping parameters.
+
+The option of using 'None' as a parameter indicates no specific grouping.
+
+### GROUP BY clause:
+
+Syntax:
+    GROUP BY v1,v2, ...
+
+where v1, v2, ... can be identifiers and expression names, or NONE.
+
+The GROUP BY clause specifies a set of calculated values for the aggregation clause to organize the calculation results. This clause can be defined either globally or after an expression.
+
+
+### EXTEND BY Clause:
+
+Syntax:
+    COLLECT SET (EX) WHERE conditions EXTEND BY EY
+
+where EX and EY are an expression name or a tuple of expression names as (e1, e2, ...).
+
+The EXTEND BY clause defines a set of lists. Each list is extended by the value calculated from EY, achieved through iterative evaluation of conditions between the instantiated EY and EX, where the instantiated EX value is a member of the list. If no such list exists, the EY value forms an initial list.
+
+
+### COLLECT EVAL and logic UNIT: 
+
+
+COLLECT EVAL is introduced to evaluate composite logic expressions. These composite logic expressions consist of multiple logic units, where the evaluation involves different instantiations for each logic unit. Each logic unit is evaluated independently using a set of instantiations until the composite expression is satisfied.
+
+Syntax:
+    collect eval(gl_ex | gl_e, v1 = p1, v2 = p2, ...) AS gc
+
+Composite logic definition is a string with the format as:
+UNIT(ex [and | or ex]) [and | or UNIT (cl_ex)]
+
+where gl_ex is an expresion which will create a composite logic string after instantiation.
+gl_ex is a composite logic string.
+v1, v2, ... are variables refered in the Composite logic definition.
+P1, P2, ... are expressions, the calculated instantiation results will be passed in as parameters for Composite logic evaluation.  
+
+The aggregated logic result from multiple evaluations of the logic unit will be assigned to gc.
+
+### WHERE clause:
+
+Syntax:
+    WHERE c1; c2; ...
+
+where c1, c2, ... are condition expressions evaluated as TRUE or FALSE.
+The WHERE clause can be defined either globally or after an expression to specify the necessary conditions to calculate expressions.
+
+
+### ORDER BY:
+
+Syntax:
+    ORDER BY expression_name [DESC] [FOR result_template]
+
+The ORDER BY clause specifies the sorting order based on the expression name for the generated result tuple, which is derived from the calculated expressions for each result template.
+
+### LIMIT:
+
+Syntax:
+    LIMIT value
+
+The LIMIT keyword sets limit for the generated result tuple, which is derived from the calculated expressions for each result template.
+
+### UPDATE:
+
+UPDATE 
+VAR v1, v2, ... SET
+   expression1 as expression2;
+   [WHERE conditions, ...]
+   ...
+
+where v1, v2, ... represent variables acting as placeholders for keys or indices in a JSON structure.
+The UPDATE statement defines how to modify s JSON structure.
+
+By iterating through instantiations of the variables, the left-hand side of the expression is assigned the value of the corresponding right instantiation, provided that the conditions specified in the condition expression are met.
+
+
+### CREATE:
+ 
+Syntax:
+    list_template: [x] where x is an expression_name or variable name.
+    dictionary_template: {a1:x1, a2:x2, ...} where a is a value, x is an expression_name or variable name.
+
+    CREATE value|
+           expression_name|
+           {expression_name: expression_name} |
+           {expression_name: list_template} |
+           list_template|
+           [dictionary_template]
+ 
+
+The `CREATE` statement defines output formats using templates, with each template assigned a unique name. The output is generated by populating the templates with value tuples calculated from the `SELECT` statement.
+
+### DEFINE:
+
+Syntax:
+DEFINE path=dirextory_path[, path=dirextory_path]
+
+The DEFINE clause defines a set of path names using "=", where these path names can be used by READ and WRITE statement for reading and writing files from the specified directory paths
+
+### READ:
+Syntax:
+    READ path1/file1 as v1[; path2/file2 as v2; ...]
+
+At the beginning of a Kiwispec, following the `DEFINE` clause, the `READ` statement reads data structures from files and binds the structures to variables using the `AS` keyword.
+
+### WRITE:
+Syntax:
+    WRITE path1/file1 from r1[; path2/file2 from r2; ...]
+
+At the end of a Kiwispec, the `WRITE` statement writes results from the `CREATE` statement to files.
 
 ## Examples:
 

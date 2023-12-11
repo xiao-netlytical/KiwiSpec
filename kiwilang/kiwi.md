@@ -182,22 +182,23 @@ read_statement := "READ", (path_name|file_path), "AS", name, {";", (path_name|fi
 write_statement := "WRITE", (path_name|file_path), "FROM", name, {";", (path_name|file_path), "FROM", name}
 
 kiwispec :=
-    [define_clause]
-    [read_statement]
 
-    "CREATE", create_template, "AS", name, {";", create_template, "AS", name}
+    [define_clause],
+    [read_statement],
 
-    "VAR", var, {",", var}
+    "CREATE", create_template, "AS", name, {";", create_template, "AS", name},
+
+    "VAR", var, {",", var},
     
-    "SELECT", ":"
+    "SELECT", ":",
         (as_clause|composite_as_clause|extend_as_clause|eval_as_clause), 
-        ";", {(as_clause|composite_as_clause|extend_as_clause|eval_as_clause), ";"}
+        ";", {(as_clause|composite_as_clause|extend_as_clause|eval_as_clause), ";"},
         
-    [group_by_clause]
-    [where_clause]
-    [order_by_clause]
+    [group_by_clause],
+    [where_clause],
+    [order_by_clause],
 
-    [write_statement]
+    [write_statement],
 
 
 ### SELECT statement and Expressions:
@@ -209,15 +210,15 @@ The SELECT statement specifies a set of expressions with multiple variables to a
 Syntax:
 
     select :=
-        "VAR", var, {",", var}
+        "VAR", var, {",", var},
         
-        "SELECT", ":"
+        "SELECT", ":",
             (as_clause|composite_as_clause|extend_as_clause|eval_as_clause), 
-            ";", {(as_clause|composite_as_clause|extend_as_clause|eval_as_clause), ";"}
+            ";", {(as_clause|composite_as_clause|extend_as_clause|eval_as_clause), ";"},
             
-        [group_by_clause]
-        [where_clause]
-        [order_by_clause]
+        [group_by_clause],
+        [where_clause],
+        [order_by_clause],
 
 "SELECT" statement includes three sections.
 
@@ -516,8 +517,8 @@ Syntax:
     update := "UPDATE",
         "VAR", var, {",", var},
             
-        "SET", ":"
-            update_as_clause, ";", {update_as_clause ";"}
+        "SET", ":",
+            update_as_clause, ";", {update_as_clause ";"},
             [where_clause]
 
 

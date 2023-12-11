@@ -122,19 +122,83 @@ As a complete solution, a platform is also under development to manage specifica
 ## Language Definition
 
 Syntax:
-    DEFINE p1 = directory_path; ...
-    READ p1/file1 as d1 [; p1/file1 as d1;]
 
-    CREATE []|{} AS r1 [;[]|{} AS r2, ...]
-    [VAR ... ] SELECT:
-        e1 [WHERE c1] [GROUP BY i,n1,...] AS name;
-        ...
-        GROUP BY i, ni,...
-        ORDER BY ni DEST LIMIT
+lowercase          := [a-z]
+uppercase          := [A-Z]
+letter             := lowercase | uppercase
+digit              := [0-9]
 
-    WRITE pi/filei from r1[; pi/filei from r1] 
+name := letter, {letter | digit | "_" letter | "_" digit}
+var := letter, {letter | digit}
 
-Between the `READ` and `WRITE` statements, the `CREATE` and `SELECT` statements can be iterated multiple times.
+path_name := name
+
+file_path := {path_name,"/"}, path_name
+
+kiwi_expr := (name, {"[", (var | name | kiwi_expr | "_"),  ["|", name] "]"}) | (var, "FROM", kiwi_expr)
+
+kiwi_composite_expr := ("SELECT SET" | "SELECT LIST" | "COUNT DISTINCT" | "SUM" | "MAX" | "MIN"),
+ "(", (kiwi_expr, {"|",  kiwi_expr}, ")"
+
+list_template := "[", (var | name), {",", (var | name)}, "]" 
+
+dictionary_template := "{", (name,":", var), {",", (name, ":", var)}, "]" 
+
+create_template :=  name | list_template | dictionary_template |
+           "{", (name,":", list_template), {"," ,(name,":", list_template)}, "}" |
+           "[", dictionary_template, "]"
+
+define_clause := "DEFINE", (path_name, "=", file_path), {",", (path_name, "=", file_path) }
+
+group_by_clause := "GROUP BY", (name|"NONE"), {",", name}
+
+extend_by_clause := "EXTEND BY", name | "(", name, {",", name}, ")"
+
+where_clause := "WHERE", (condition_ex | logic_ex), {";", (condition_ex | logic_ex)}
+
+order_by_clause := "ORDER BY", name, ["DEST"], ["LIMIT", digit], "FOR", name,  {";", name, ["DEST"], ["LIMIT", digit], "FOR", name}
+
+as_clause := kiwi_expr, ["WHERE", (condition_ex | logic_ex)], "AS", name
+
+composite_as_clause := kiwi_composite_expr, ["WHERE", (condition_ex | logic_ex)], [group_by_clause] "AS", name
+
+extend_as_clause := "SELECT SET", ["WHERE", (condition_ex | logic_ex)], [extend_by_clause] "AS", name
+
+logic_expr_1 := "(", (name|logic_expr_1|logic_expr_2),  ("AND" | "OR"),  (name|logic_expr_1|logic_expr_2), ")"
+logic_expr_2 := (name|logic_expr_1|logic_expr_2),  ("AND" | "OR"),  (name|logic_expr_1|logic_expr_2)
+
+logic_unit_1 := "(", "UNIT", "(", logic_expr_1 | logic_expr_2, ")", 
+                 {("AND" | "OR"), "UNIT", "(", logic_expr_1 | logic_expr_2, ")"}, ")"
+
+logic_unit_2 := "UNIT", "(", logic_expr_1 | logic_expr_2, ")", 
+                 {("AND" | "OR"), "UNIT", "(", logic_expr_1 | logic_expr_2, ")"}
+
+unit_logic_string := (logic_unit_1 | logic_unit_2), { ("AND" | "OR"), (logic_unit_1 | logic_unit_2) }
+
+eval_as_clause := "COLLECT EVAL", "(", (kiwi_expr | unit_logic_string), {name, "=", name}, ")", "AS", name
+
+read_statement := "READ", (path_name|file_path), "AS", name, {";", (path_name|file_path), "AS", name}
+
+write_statement := "WRITE", (path_name|file_path), "FROM", name, {";", (path_name|file_path), "FROM", name}
+
+kiwispec :=
+    [define_clause]
+    [read_statement]
+
+    "CREATE", create_template, "AS", name, {";", create_template, "AS", name}
+
+    "VAR", var, {",", var}
+    
+    "SELECT", ":"
+        (as_clause|composite_as_clause|extend_as_clause|eval_as_clause), 
+        ";", {(as_clause|composite_as_clause|extend_as_clause|eval_as_clause), ";"}
+        
+    [group_by_clause]
+    [where_clause]
+    [order_by_clause]
+
+    [write_statement]
+
 
 ### SELECT statement and Expressions:
 
@@ -143,15 +207,17 @@ SELECT statement is the main component of a wikispec.
 The SELECT statement specifies a set of expressions with multiple variables to access various json data structures and assigns the expressions with names. Expressions defines a set of transformed values. By iterating through valid variable instantiations, calculated results from expressions are organized as a set of value tuples.
 
 Syntax:
-[VAR ... ] SELECT
-    e1 as v1;
-    e2 as v2;
-    ....
 
-    [GROUP BY id1, v1,...;]
-    [WHERE ce1; ce2;...]
-    [ORDER BY v1 DESC LIMIT n1 as r1; v2 DESC LIMIT n2 as r2;...]
-
+    select :=
+        "VAR", var, {",", var}
+        
+        "SELECT", ":"
+            (as_clause|composite_as_clause|extend_as_clause|eval_as_clause), 
+            ";", {(as_clause|composite_as_clause|extend_as_clause|eval_as_clause), ";"}
+            
+        [group_by_clause]
+        [where_clause]
+        [order_by_clause]
 
 "SELECT" statement includes three sections.
 
@@ -169,7 +235,8 @@ An expression can only refer the names which already defined in the previous exp
 ### VAR clause:
 
 Syntax:
-VAR v1, v2, ...
+
+    var := "VAR", var, {",", var}
 
 
 The 'var' clause declares a set of identifiers.
@@ -182,7 +249,9 @@ An identifier is a key variable or an index variable that serves as a placeholde
 ### AS clause:
 
 Syntax:
-    e1 AS n1;
+
+    as := (as_clause|composite_as_clause|extend_as_clause|eval_as_clause), 
+        ";", {(as_clause|composite_as_clause|extend_as_clause|eval_as_clause), ";"}
 
 "AS" clause binds an expression to an expression name. Once an expression name is defined, it can be used in the following value expressions, condition expressions and output template.
 
@@ -192,7 +261,8 @@ The left of AS is an expression, the right of AS is the bound expression name.
 #### "|" operator in a path accessing a json value:
 
 Syntax:
-e[key_or_index | default]
+
+    kiwi_expr := name, {"[", (var | name | kiwi_expr | "_"),  ["|", name] "]"}
 
 A key or index in an expression can be followed with "|" to set a default value.
 
@@ -203,18 +273,26 @@ Example:
     a[b[i] | "default value"]
 
 #### index_by function:
+
     index_by(expression) is a wikispec function, which returns the next index for a generated value.
 
 ### FROM clause:
+
 Syntax:
-    i from ex[i]
+
+    var, "FROM", kiwi_expr
 
 FROM operator declares a variable as a key or index identifier for a specific json structure.
 With FROM clause an expression is specified and the valid instantiations defines the value set.
 
 ### COLLECT SET:
+
 Syntax:
-    COLLECT SET (e1 [|e2]) [WHERE c1;c2;...] [GROUP BY n1, n2, ...]
+
+    kiwi_composite_expr := ("SELECT SET" | "SELECT LIST" | "COUNT DISTINCT" | "SUM" | "MAX" | "MIN"),
+    "(", (kiwi_expr, {"|",  kiwi_expr}, ")"
+    group_by_clause := "GROUP BY", name, {",", name}
+    composite_as_clause := kiwi_composite_expr, ["WHERE", (condition_ex | logic_ex)], [group_by_clause] "AS", name
 
 COLLECT SET is a KiwiSpec operator employed to construct composite expressions.
 
@@ -231,7 +309,11 @@ The option of using 'None' as a parameter indicates no specific grouping.
 ### COLLECT LIST:
 
 Syntax:
-    COLLECT LIST (e1 [|e2]) [WHERE c1;c2;...] [GROUP BY n1, n2, ...]
+
+    kiwi_composite_expr := ("SELECT SET" | "SELECT LIST" | "COUNT DISTINCT" | "SUM" | "MAX" | "MIN"),
+    "(", (kiwi_expr, {"|",  kiwi_expr}, ")"
+    group_by_clause := "GROUP BY", name, {",", name}
+    composite_as_clause := kiwi_composite_expr, ["WHERE", (condition_ex | logic_ex)], [group_by_clause] "AS", name
 
 COLLECT LIST is a KiwiSpec operator employed to construct composite expressions.
 
@@ -246,8 +328,13 @@ If 'GROUP BY' is not present and not defined globally, all non-aggregated parame
 The option of using 'None' as a parameter indicates no specific grouping.
 
 ### COUNT DISTINCT:
+
 Syntax:
-    COUNT DISTINCT (e1 [|e2]) [WHERE c1;c2;...] [GROUP BY n1, n2, ...]
+
+    kiwi_composite_expr := ("SELECT SET" | "SELECT LIST" | "COUNT DISTINCT" | "SUM" | "MAX" | "MIN"),
+    "(", (kiwi_expr, {"|",  kiwi_expr}, ")"
+    group_by_clause := "GROUP BY", name, {",", name}
+    composite_as_clause := kiwi_composite_expr, ["WHERE", (condition_ex | logic_ex)], [group_by_clause] "AS", name
 
 COUNT DISTINCT is a KiwiSpec operator employed to construct composite expressions.
 
@@ -262,9 +349,13 @@ If 'GROUP BY' is not present and not defined globally, all non-aggregated parame
 The option of using 'None' as a parameter indicates no specific grouping.
 
 ### SUM:
-Syntax:
-    SUM (expression) [WHERE c1;c2;...] [GROUP BY n1, n2, ...]
 
+Syntax:
+
+    kiwi_composite_expr := ("SELECT SET" | "SELECT LIST" | "COUNT DISTINCT" | "SUM" | "MAX" | "MIN"),
+    "(", (kiwi_expr, {"|",  kiwi_expr}, ")"
+    group_by_clause := "GROUP BY", name, {",", name}
+    composite_as_clause := kiwi_composite_expr, ["WHERE", (condition_ex | logic_ex)], [group_by_clause] "AS", name
 SUN is a KiwiSpec operator employed to construct composite expressions.
 
 'SUM' create a new expression from the input expression. An expression specified by 'SUM' defines a value for each 'group by' group. The value represents the sum of calculated values from the input expressions, achieved by iterating through relevant variable instantiations associated with the group.
@@ -278,8 +369,13 @@ If 'GROUP BY' is not present and not defined globally, all non-aggregated parame
 The option of using 'None' as a parameter indicates no specific grouping.
 
 ### MIN:
+
 Syntax:
-    MIN (e1 [|e2]) [WHERE c1;c2;...] [GROUP BY n1, n2, ...]
+
+    kiwi_composite_expr := ("SELECT SET" | "SELECT LIST" | "COUNT DISTINCT" | "SUM" | "MAX" | "MIN"),
+    "(", (kiwi_expr, {"|",  kiwi_expr}, ")"
+    group_by_clause := "GROUP BY", name, {",", name}
+    composite_as_clause := kiwi_composite_expr, ["WHERE", (condition_ex | logic_ex)], [group_by_clause] "AS", name
 
 MIN is a KiwiSpec operator employed to construct composite expressions.
 
@@ -294,8 +390,13 @@ If 'GROUP BY' is not present and not defined globally, all non-aggregated parame
 The option of using 'None' as a parameter indicates no specific grouping.
 
 ### MAX:
+
 Syntax:
-    MAX (e1 [|e2]) [WHERE c1;c2;...] [GROUP BY n1, n2, ...]
+
+    kiwi_composite_expr := ("SELECT SET" | "SELECT LIST" | "COUNT DISTINCT" | "SUM" | "MAX" | "MIN"),
+    "(", (kiwi_expr, {"|",  kiwi_expr}, ")"
+    group_by_clause := "GROUP BY", name, {",", name}
+    composite_as_clause := kiwi_composite_expr, ["WHERE", (condition_ex | logic_ex)], [group_by_clause] "AS", name
 
 MAN is a KiwiSpec operator employed to construct composite expressions.
 
@@ -312,9 +413,10 @@ The option of using 'None' as a parameter indicates no specific grouping.
 ### GROUP BY clause:
 
 Syntax:
-    GROUP BY v1,v2, ...
 
-where v1, v2, ... can be identifiers and expression names, or NONE.
+    group_by_clause := "GROUP BY", (name|"NONE"), {",", name}
+
+where name can be an identifier or an expression name, or NONE.
 
 The GROUP BY clause specifies a set of calculated values for the aggregation clause to organize the calculation results. This clause can be defined either globally or after an expression.
 
@@ -322,23 +424,39 @@ The GROUP BY clause specifies a set of calculated values for the aggregation cla
 ### EXTEND BY Clause:
 
 Syntax:
-    COLLECT SET (EX) WHERE conditions EXTEND BY EY
 
-where EX and EY are an expression name or a tuple of expression names as (e1, e2, ...).
+    extend_by_clause := "EXTEND BY", (name | "(", name, {",", name}, ")")
+
+    extend_as_clause := "SELECT SET","(",  (name | "(", name, {",", name}, ")"), ")", ["WHERE", (condition_ex | logic_ex)], [extend_by_clause] "AS", name
+
+where an expression name or a tuple of expression names is used as the building blocks.
+Lets use EX to represent the selected name or tuple, EY to represent the extened name or tuple.
 
 The EXTEND BY clause defines a set of lists. Each list is extended by the value calculated from EY, achieved through iterative evaluation of conditions between the instantiated EY and EX, where the instantiated EX value is a member of the list. If no such list exists, the EY value forms an initial list.
 
 
 ### COLLECT EVAL and logic UNIT: 
 
-
 COLLECT EVAL is introduced to evaluate composite logic expressions. These composite logic expressions consist of multiple logic units, where the evaluation involves different instantiations for each logic unit. Each logic unit is evaluated independently using a set of instantiations until the composite expression is satisfied.
 
 Syntax:
-    collect eval(gl_ex | gl_e, v1 = p1, v2 = p2, ...) AS gc
 
-Composite logic definition is a string with the format as:
-UNIT(ex [and | or ex]) [and | or UNIT (cl_ex)]
+    logic_expr_1 := "(", (name|logic_expr_1|logic_expr_2),  ("AND" | "OR"),  (name|logic_expr_1|logic_expr_2), ")"
+    logic_expr_2 := (name|logic_expr_1|logic_expr_2),  ("AND" | "OR"),  (name|logic_expr_1|logic_expr_2)
+
+    logic_unit_1 := "(", "UNIT", "(", logic_expr_1 | logic_expr_2, ")", 
+                    {("AND" | "OR"), "UNIT", "(", logic_expr_1 | logic_expr_2, ")"}, ")"
+
+    logic_unit_2 := "UNIT", "(", logic_expr_1 | logic_expr_2, ")", 
+                    {("AND" | "OR"), "UNIT", "(", logic_expr_1 | logic_expr_2, ")"}
+
+    unit_logic_string := (logic_unit_1 | logic_unit_2), { ("AND" | "OR"), (logic_unit_1 | logic_unit_2) }
+
+    eval_as_clause := "COLLECT EVAL", "(", (kiwi_expr | unit_logic_string), {name, "=", name}, ")", "AS", name
+
+Example:
+
+    COLLECT EVAL(gl_ex | gl_e, v1 = p1, v2 = p2, ...) AS gc
 
 where gl_ex is an expresion which will create a composite logic string after instantiation.
 gl_ex is a composite logic string.
@@ -350,72 +468,86 @@ The aggregated logic result from multiple evaluations of the logic unit will be 
 ### WHERE clause:
 
 Syntax:
-    WHERE c1; c2; ...
 
-where c1, c2, ... are condition expressions evaluated as TRUE or FALSE.
+   where_clause := "WHERE", (condition_ex | logic_ex), {";", (condition_ex | logic_ex)}
+
+where (condition_ex | logic_ex) are condition expressions evaluated as TRUE or FALSE.
 The WHERE clause can be defined either globally or after an expression to specify the necessary conditions to calculate expressions.
 
 
 ### ORDER BY:
 
 Syntax:
-    ORDER BY expression_name [DESC] [FOR result_template]
+
+    order_by_clause := "ORDER BY", name, ["DEST"], ["LIMIT", digit], "FOR", name,  {";", name, ["DEST"], ["LIMIT", digit], "FOR", name}
 
 The ORDER BY clause specifies the sorting order based on the expression name for the generated result tuple, which is derived from the calculated expressions for each result template.
 
 ### LIMIT:
 
 Syntax:
-    LIMIT value
+
+    order_by_clause := "ORDER BY", name, ["DEST"], ["LIMIT", digit], "FOR", name,  {";", name, ["DEST"], ["LIMIT", digit], "FOR", name}
 
 The LIMIT keyword sets limit for the generated result tuple, which is derived from the calculated expressions for each result template.
-
-### UPDATE:
-
-UPDATE 
-VAR v1, v2, ... SET
-   expression1 as expression2;
-   [WHERE conditions, ...]
-   ...
-
-where v1, v2, ... represent variables acting as placeholders for keys or indices in a JSON structure.
-The UPDATE statement defines how to modify s JSON structure.
-
-By iterating through instantiations of the variables, the left-hand side of the expression is assigned the value of the corresponding right instantiation, provided that the conditions specified in the condition expression are met.
-
 
 ### CREATE:
  
 Syntax:
-    list_template: [x] where x is an expression_name or variable name.
-    dictionary_template: {a1:x1, a2:x2, ...} where a is a value, x is an expression_name or variable name.
 
-    CREATE value|
-           expression_name|
-           {expression_name: expression_name} |
-           {expression_name: list_template} |
-           list_template|
-           [dictionary_template]
+    list_template := "[", (var | name), {",", (var | name)}, "]" 
+
+    dictionary_template := "{", (name,":", var), {",", (name, ":", var)}, "]" 
+
+    create_template :=  name | list_template | dictionary_template |
+            "{", (name,":", list_template), {"," ,(name,":", list_template)}, "}" |
+            "[", dictionary_template, "]"
  
 
 The `CREATE` statement defines output formats using templates, with each template assigned a unique name. The output is generated by populating the templates with value tuples calculated from the `SELECT` statement.
 
+### UPDATE:
+
+Syntax:
+
+    update_kiwi_expr := (name, {"[", (var | name | update_kiwi_expr )"]"})
+    update_as_clause := update_kiwi_expr, ["WHERE", (condition_ex | logic_ex)], "AS", update_kiwi_expr
+
+    update := "UPDATE",
+        "VAR", var, {",", var},
+            
+        "SET", ":"
+            update_as_clause, ";", {update_as_clause ";"}
+            [where_clause]
+
+
+where var represents variables acting as placeholders for keys or indices in a JSON structure.
+The UPDATE statement defines how to modify a JSON structure.
+
+By iterating through instantiations of the variables, the left-hand side of the expression is assigned the value of the corresponding right instantiation, provided that the conditions specified in the condition expression are met.
+
 ### DEFINE:
 
 Syntax:
-DEFINE path=dirextory_path[, path=dirextory_path]
+
+    define_clause := "DEFINE", (path_name, "=", file_path), {",", (path_name, "=", file_path) }
+
 
 The DEFINE clause defines a set of path names using "=", where these path names can be used by READ and WRITE statement for reading and writing files from the specified directory paths
 
 ### READ:
+
 Syntax:
-    READ path1/file1 as v1[; path2/file2 as v2; ...]
+
+    read_statement := "READ", (path_name|file_path), "AS", name, {";", (path_name|file_path), "AS", name}
 
 At the beginning of a Kiwispec, following the `DEFINE` clause, the `READ` statement reads data structures from files and binds the structures to variables using the `AS` keyword.
 
 ### WRITE:
+
 Syntax:
-    WRITE path1/file1 from r1[; path2/file2 from r2; ...]
+
+    write_statement := "WRITE", (path_name|file_path), "FROM", name, {";", (path_name|file_path), "FROM", name}
 
 At the end of a Kiwispec, the `WRITE` statement writes results from the `CREATE` statement to files.
 

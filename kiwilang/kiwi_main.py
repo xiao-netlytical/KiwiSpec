@@ -683,6 +683,7 @@ class CreateBodyParser:
 			vu_list = "["+vus.replace('|', ',')+"]"
 			self.for_loop_list.append((offset, f"""extend_by = {group_by}"""))
 			self.for_loop_list.append((offset, """collect_by = """+ vu_list))
+			self.for_loop_list.append((offset, """collect_by.append(extend_by)"""))
 			self.for_loop_list.append((offset,f"""for var in collect_by:"""))
 			self.for_loop_list.append((offset,f"""    if var not in {va}.setdefault(var, []):"""))
 			self.for_loop_list.append((offset,f"""         {va}[var].append(var)"""))

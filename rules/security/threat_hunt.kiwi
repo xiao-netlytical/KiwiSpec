@@ -1,20 +1,8 @@
 
-define read_path=../sample_data/zeek/conn.json, 
-read_dns_path=../sample_data/zeek/dns.json, 
-write_path=../sample_data/result
 
-#Discovery-Network Service Scanning 
-read read_path as flows
-CREATE [{"source": source, "dport":dport, "dhost": dhost}] as r
-VAR i SELECT
-    flows[i]["id.orig_h"] as source;
-    COLLECT SET(flows[i]["id.resp_h"]) as  dhost;
-    COLLECT SET(flows[i]["id.resp_p"]) as  dport;
-    where flows[i]["local_orig" | True] and flows[i]["local_resp" | True];    
-    flows[i]["conn_state"] in ["S0", "REJ"]
-write write_path/top_sender.json from r
 
-#Discovery-Network Service Scanning, sort by dport for r1 and dhost for r2, and limited to 10 
+#Discovery-Network Service Scanning: sort by dport for r1 and dhost for r2, and limited to 10,
+#for failed or rejected connections with internal traffic only
 read read_path as flows
 CREATE [{"source": source, "dport":dport, "dport_c":dport_c}] AS r1 ;
        [{"source": source, "dhost": dhost, "dhost_c": dhost_c}] AS r2  
@@ -33,7 +21,7 @@ r1[i]["dport"] AS ",".join(str(r1[i]["dport"]))
 write write_path/top_sender_dport.json from r1; 
 	  write_path/top_sender_dhost.json from r2
 
-#longest connection, or concatenated connections limit 100
+#longest connection, or concatenated connections limit 100, the source server name is updated
 READ read_path AS flows; 
 write_path/ip_to_servers.json as srv_names
 CREATE [{"src":s_ip, "dst":d_ip, "srv":proto, "flows": ct, "duration":dur}] AS r
@@ -74,7 +62,7 @@ create [{"src":s_ip, "dst":d_ip, "intervals": window_ct}] as r0
 var i  select
     flows[i]["id.orig_h"] AS s_ip;
     flows[i]["id.resp_h"] AS d_ip;
-    int(epoch_time(flows[i]["ts"])) as window_start;
+    int(epoch_time(flows[i]["ts"])/300) as window_start;
     count distinct(window_start) group by s_ip,d_ip as window_ct;
     order by window_ct DESC LIMIT 100
 write write_path/top_consistent_interval.json from r
@@ -92,6 +80,7 @@ update r var i set
     r[i]["server"] as srv_names[r[i]["src"] | []]
  write write_path/dns_domain_requests.json from r   
 
+#correlate the top connection/concatenated duration and top bytes sender
 read write_path/top_duration.json as top_dur_ip; write_path/top_bytes_sender.json as top_byte_ip
 create {s_ip_1: srv} as r
 var i, j select

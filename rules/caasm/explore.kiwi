@@ -403,6 +403,6 @@ var i, j select
     flows[i]["id.resp_h"] AS d_ip_1;
     flows[j]["id.orig_h"] AS s_ip_2;
     flows[j]["id.resp_h"] AS d_ip_2;
-    collect set ((s_ip_1, d_ip_1), (s_ip_2, d_ip_2)) extend by (s_ip_1, d_ip_1) as path_recording;
-where flows[i]["id.resp_p"] == 3389; flows[j]["id.resp_p"] == 3389
+    collect set ((s_ip_1, d_ip_1)) where d_ip_1 == s_ip_2 extend by (s_ip_2, d_ip_2) as path_recording;
+where flows[i]["id.resp_p"] == 445; flows[j]["id.resp_p"] == 445
 WRITE output_path/path_recording.json FROM result

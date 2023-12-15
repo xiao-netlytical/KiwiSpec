@@ -1,7 +1,9 @@
 
-define read_path=../sample_data/zeek, write_path=../sample_data/result
+define read_path=../sample_data/zeek, 
+read_dns_path=../sample_data/zeek/dns.json, 
+write_path=../sample_data/result
 
-#DNS request for each source address in five minute window ordered by request count
+#DNS request for each source address in a five minute window ordered by request count
 read read_path/conn.json as flows
 create {window_start: [{dns_src: dns_requests}]}  as r
 var i  select
@@ -9,10 +11,10 @@ var i  select
     int(epoch_time(flows[i]["ts"])/300) as window_start;
     count distinct(i) as dns_requests;
     where flows[i]["id.resp_p"] == 53;
-    order by dns_requests
+    order by dns_requests desc
 write write_path/top_dns_sender.json from r
 
-#one minute sampling of five min interval DNS request for per window and per source address
+#every one minute sampling of a five minute interval, get DNS request count for per window and per source address
 read read_path/conn.json as flows
 create {window_start: {dns_src: cnt}}  as r
 var i,j select
@@ -24,7 +26,7 @@ int(epoch_time(flows[j]["ts"])/60) >= window_start and int(epoch_time(flows[j]["
 write write_path/5_min_dns_request.json from r
 
 # aggregate the connections between a source and destination pair, 
-# and sort pairs based on the distinct protocols
+# and sort the source and destination pairs based on the distinct protocols
 read read_path/conn.json as flows
 create [{"ip":s_ip, "pkts": pkts, "bytes":bytes, "relationship":relationship}] as r
 var i select
@@ -34,3 +36,14 @@ var i select
     sum(flows[i]["orig_bytes" | 0] + flows[i]["resp_bytes" | 0]) as bytes;
 order by relationship desc
 write write_path/top_out_rel.json from r
+
+#Discovery-Network Service Scanning 
+read read_path as flows
+CREATE [{"source": source, "dport":dport, "dhost": dhost}] as r
+VAR i SELECT
+    flows[i]["id.orig_h"] as source;
+    COLLECT SET(flows[i]["id.resp_h"]) as  dhost;
+    COLLECT SET(flows[i]["id.resp_p"]) as  dport;
+    where flows[i]["local_orig" | True] and flows[i]["local_resp" | True];    
+    flows[i]["conn_state"] in ["S0", "REJ"]
+write write_path/top_sender.json from r

@@ -941,6 +941,9 @@ class UpdateBodyParser:
 				vu, va = split(assign_val, ' as ')
 				assign_expr = list_strip(re.split("[+,-,*,/,%,^,!,=,(,),' ',',','{','}']", vu)) \
 							+ list_strip(re.split("[+,-,*,/,%,^,!,=,(,),' ',',','{','}']", va))
+			elif str_in(' from ',assign_val):
+				_, vu = split(assign_val,' from ')
+				assign_expr = list_strip(re.split("[+,-,*,/,%,^,!,=,(,),' ',',','{','}']", vu))
 			elif str_in(' order by ',assign_val):
 				vu, va = split(assign_val,' order by ')
 				assign_expr = list_strip(re.split("[+,-,*,/,%,^,!,=,(,),' ',',','{','}']", vu))
@@ -1002,7 +1005,7 @@ class UpdateBodyParser:
 				if set(self.assign_depend[i]) <= tmp_var_loop_set:
 					if str_in(' as ', self.assign_list[i]):
 						vu, va = list_strip(split(self.assign_list[i],' as '))
-						for v_i in [vu, va]:
+						for v_i in [va]:
 							check_str, self.access_map_list = check_access_map(self.access_map_list, v_i)
 							if check_str:
 								self.for_loop_list.append(check_str)

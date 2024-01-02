@@ -200,8 +200,8 @@ write write_path/unidentified_server_group_from_same_src.json from r2
 # put source group to destination group pair to a traffic_list
 # invoke drawing the drawing the relationship graph
 
-READ write_path/unidentified_server_group_to_same_dst.json as ip_unknown_servers;
-write_path/ip_to_server_group.json as ip_server_group;
+READ write_path/unidentified_server_group_to_same_dst.json as ip_unknown_server;
+write_path/ip_to_server_group.json as ip_server;
 write_path/clients.json as clients;
 write_path/workloads.json AS workloads;
 write_path/webservers.json AS webservers
@@ -212,19 +212,13 @@ var i select
     workloads[i] as ip;
     "unknown" as name
 
-create [{"ip": i, "name": name}] as ip_server
-var i select
-     ip_server_group[i] as name
-
-create [{"ip": i, "name": name}] as ip_unknown_server
-var i select
-     ip_unknown_servers[i] as name
+update var i set
+i from ip_server[i];
+ip_to_group[i] as ip_server[i]
 
 update var i set
-ip_to_group[ip_server[i]["ip"]] as ip_server[i]["name"]
-
-update var i set
-ip_to_group[ip_unknown_server[i]["ip"]] as ip_unknown_server[i]["name"]
+i from ip_server[i];
+ip_to_group[i] as ip_unknown_server[i]
 
 update var i set
 ip_to_group[webservers[i]] as "WEB_server"

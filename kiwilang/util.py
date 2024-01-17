@@ -1,3 +1,5 @@
+# Author: Hong Xiao
+# This file includes the utility code for translating code in KiwiSpec to python and executes the python code.
 
 def write_json_file(file_name, data):
     import json
@@ -135,6 +137,73 @@ def collect_eval(input_string, input_p):
     r = eval(tmp_result_str)
     return  r, result_str
 
+import re
+
+def get_sub_cond(con):
+    cond_expr = re.split(r'\b(?:and|or|not)\b', con, flags=re.IGNORECASE)
+    return cond_expr
+
+def eval_with_var(ex, value_str):
+    if value_str:
+        exec(value_str, globals())
+    return eval(ex)
+
+def test_expr(ex, value_str):
+    try:
+        lg = eval_with_var(ex, value_str)
+        return True
+    except:
+        return False
+    
+def test_logic(ex, value_str):
+    if test_expr(ex, value_str):
+        return eval_with_var(ex, value_str)
+    else:
+        return False
+    
+def get_ex_keys(ex):
+    return (ex.keys() if isinstance(ex, dict) else range(len(ex)))
+
+def execute_logic(con_string, con_var_dep, value_str=''):
+    if not con_var_dep:
+        return test_logic(con_string, value_str)
+
+    con_string_list = get_sub_cond(con_string)
+    vr = list(con_var_dep.keys())[0]
+    ex = con_var_dep[vr]
+    if not test_expr(ex, value_str):
+        for ei in con_string_list:
+            if ei.strip() != 'not' and ex in ei:
+                con_string = con_string.replace(ei, ' False ')
+
+        if test_expr(con_string, value_str):
+            return eval_with_var(con_string, value_str)
+
+    new_con_var_dep = {}
+    for k, v in con_var_dep.items():
+        if f'[{k}]' in con_string:
+            new_con_var_dep[k] = v 
+
+    con_var_dep = new_con_var_dep
+
+    vr = list(con_var_dep.keys())[0]
+    ex = con_var_dep[vr]
+
+    del con_var_dep[vr]
+
+    r = False
+    t_ex= eval_with_var(ex, value_str)
+    
+    for i in get_ex_keys(t_ex):
+        r = execute_logic(con_string, con_var_dep, value_str+f'{vr} = {i};')
+        if r:
+            return r
+    return r   
+
+def execute_code(result, result_v):
+    exec(result, globals())
+    if result_v:
+        return globals()[result_v]
 
 def draw_conn(connections):
     import networkx as nx
@@ -163,3 +232,4 @@ def draw_conn(connections):
     plt.title("Point-to-Point Link Graph")
     plt.axis('off')  # Turn off the axis
     plt.show()
+

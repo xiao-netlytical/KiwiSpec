@@ -373,7 +373,7 @@ class BodyLexer:
 		return Token(tok_type, id_str)
 
 def get_access_maps(tokens, var_list, value_list, exclude_list=[]):
-	i_depend = set()
+	all_depend = set()
 	var_depend = []
 	s_curr = ''
 	s_stack = []
@@ -396,17 +396,20 @@ def get_access_maps(tokens, var_list, value_list, exclude_list=[]):
 				pre_i = s_stack.pop()
 				pre_str = pre_i[0].strip('[')
 				if pre_str in value_list:
-					i_depend.add(pre_str)
+					all_depend.add(pre_str)
 
 			curr_v = s_curr[1:-1].strip()
 
+			if (not curr_v) or (not pre_str) or (':' in curr_v) :
+				continue
+
 			if curr_v in value_list:
-				i_depend.add(curr_v)
+				all_depend.add(curr_v)
 				var_flag = True
 
 			if curr_v in var_list and curr_v not in exclude_list:
 				var_depend.append(curr_v)
-				i_depend.add(curr_v)
+				all_depend.add(curr_v)
 				var_flag = True
 				var_map[curr_v] = pre_str
 
@@ -423,12 +426,12 @@ def get_access_maps(tokens, var_list, value_list, exclude_list=[]):
 	
 	if s_curr in var_list and s_curr not in exclude_list:
 		var_depend.append(s_curr)
-		i_depend.add(s_curr)
+		all_depend.add(s_curr)
 
 	if s_curr in value_list:
-		i_depend.add(s_curr)
+		all_depend.add(s_curr)
 
-	return i_depend, var_depend, var_map, access_map
+	return all_depend, var_depend, var_map, access_map
 
 def fix_default_format(assign_a):
 #a[x|y] a[b[x|y]] a[i][j][x|y] a[i|k][j][x|y] a[b[x|y]|z] a[b[x]|c[y]]
@@ -516,21 +519,32 @@ class CreateBodyParser:
 		self.assign_depend = []
 		self.cond_depend = []
 		self.var_depend = []
+		self.where_var_depend = []
 		self.value_list = []
 		self.group_by_var = set()
 		self.var_agg_map = {}
 		self.value_depend = {}
 
 		self.assign_list = [fix_default_format(i) for i in self.assign_list]
-		self.where_list = [fix_default_format(i) for i in self.where_list]
+		self.where_list = ['('+fix_default_format(i)+')' for i in self.where_list]
+		if self.where_list: 
+			self.where_list = [' and '.join(self.where_list)]
 
 		def _add_var_depend(new_dep, where_access):
 			if where_access:
-				return
-			for i in self.var_depend:
-				if set(new_dep) <= set(i):
-						return
-			self.var_depend.append(new_dep)
+				t_new_dep = set(new_dep)
+				for i in new_dep:
+					t_new_dep = t_new_dep - set(i)
+				f_new_dep = []
+				for i in new_dep:
+					if i in t_new_dep:
+						f_new_dep.append(i)	
+				self.where_var_depend.append(f_new_dep)
+			else:
+				for i in self.var_depend:
+					if set(new_dep) <= set(i):
+							return
+				self.var_depend.append(new_dep)
 
 		def _startwith_agg(s, assign):
 			for i in s:
@@ -561,9 +575,8 @@ class CreateBodyParser:
 				if all_depend:
 					if where_access:
 						for where_d in all_depend:
-							for assign_d_set in self.assign_depend:
-								if where_d in assign_d_set:
-									self.depend.add(where_d)
+							if where_d in self.map_list.keys() or where_d in self.value_list:
+								self.depend.add(where_d)
 					else:
 						self.depend = self.depend.union(all_depend)
 
@@ -680,6 +693,7 @@ class CreateBodyParser:
 
 		print("self.cond_depend:", self.cond_depend)
 		print("self.var_depend:", self.var_depend)
+		print("self.where_var_depend:", self.where_var_depend)
 		print("self.value_depend:", self.value_depend)
 		print("self.map_list:", self.map_list)
 		print("self.where_map_list:", self.where_map_list)
@@ -1429,3 +1443,5 @@ def main():
 
 if __name__=="__main__":
     main()
+
+

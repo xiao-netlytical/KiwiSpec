@@ -1,5 +1,8 @@
 
 
+define read_path=../sample_data/zeek/conn.json, 
+read_dns_path=../sample_data/zeek/dns.json, 
+write_path=../sample_data/result
 
 #Discovery-Network Service Scanning: sort by dport for r1 and dhost for r2, and limited to 10,
 #for failed or rejected connections with internal traffic only

@@ -36,7 +36,7 @@ write write_path/unidentified_servers.json from r
 # get all the protocols which is  not identified server supported protocol
 READ conn_path/conn.json AS flows; 
 write_path/clean_ip_to_servers.json as ip_servers; 
-application_path/app_proto.json as proto_list;
+application_path/app_protos.json as proto_list;
 application_path/proto_desciption.json as proto_disc
 create {d_ip: serv_protos} as ser_protos
 VAR i, SELECT
@@ -61,7 +61,7 @@ write write_path/abnormal_proto_to_server.json from r
 READ write_path/clean_ip_to_servers.json AS srvs; 
 write_path/clean_server_to_ips.json AS ips;
 conn_path/conn.json AS flows; 
-application_path/app_proto.json as proto_list;
+application_path/app_protos.json as proto_list;
 application_path/proto_desciption.json as proto_disc
 
 CREATE [{"s_srv":s_srv, "d_srv":d_srv, "protos": proto, "disc": disc, "src_count": s_srv_c, "dst_count": d_srv_c, "s_count": s_count, "d_count":d_count}] AS r
@@ -87,7 +87,7 @@ WRITE write_path/baseline_server_to_server_traffic.json FROM r
 READ write_path/clean_ip_to_servers.json AS srvs; 
 write_path/clean_server_to_ips.json AS ips;
 conn_path/conn.json AS flows; 
-application_path/app_proto.json as proto_list;
+application_path/app_protos.json as proto_list;
 application_path/proto_desciption.json as proto_disc
 
 CREATE [{"s_srv":s_srv, "d_srv":d_srv, "protos": proto, "disc": disc, "rej_count": rej_count, "permit_count": permit_count, "app_proto":app_proto,  "src_count": s_srv_c, "dst_count": d_srv_c, "s_count": s_count, "d_count":d_count}] AS r
@@ -151,7 +151,7 @@ write_path/count.json from count
 READ write_path/clean_ip_to_servers.json AS srvs; 
 write_path/clean_server_to_ips.json AS ips;
 conn_path/conn.json AS flows; 
-application_path/app_proto.json as proto_list;
+application_path/app_protos.json as proto_list;
 application_path/proto_desciption.json as proto_disc
 
 CREATE [{"s_srv":s_srv, "d_srv":d_srv, "protos": proto, "disc": disc, "rej_count": rej_count, "permit_count": permit_count, "app_proto":app_proto,  "src_count": s_srv_c, "dst_count": d_srv_c, "s_count": s_count, "d_count":d_count}] AS r
@@ -196,7 +196,7 @@ WRITE write_path/server_to_server_permit_rules.json FROM p_rule
 READ write_path/clean_ip_to_servers.json AS srvs; 
 write_path/clean_server_to_ips.json AS ips;
 conn_path/conn.json AS flows; 
-application_path/app_proto.json as proto_list;
+application_path/app_protos.json as proto_list;
 application_path/proto_desciption.json as proto_disc
 
 CREATE [{"src":src, "dst":dst, "proto": proto, "disc": disc}] AS r
@@ -241,9 +241,9 @@ WRITE write_path/agg_permit_rules.json FROM r2
 READ output_path/clean_ip_to_servers.json AS srvs; 
 output_path/clean_server_to_ips.json AS ips;
 conn_path/conn.json AS flows; 
-application_path/app_proto.json as proto_list;
+application_path/app_protos.json as proto_list;
 application_path/proto_desciption.json as proto_disc;
-application_path/app_proto.json as app_protos
+application_path/app_protos.json as app_protos
 
 create t_protos as a_protos
 var i select
@@ -298,9 +298,9 @@ WRITE output_path/potential_bad_calls.json from r
 READ output_path/clean_ip_to_servers.json AS srvs; 
 output_path/clean_server_to_ips.json AS ips;
 conn_path/conn.json AS flows; 
-application_path/app_proto.json as app_proto;
+application_path/app_protos.json as app_proto;
 application_path/proto_desciption.json as proto_disc;
-application_path/app_proto.json as app_protos;
+application_path/app_protos.json as app_protos;
 output_path/clean_server_to_ips.json as ips
 
 create srv as srv_list

@@ -686,8 +686,38 @@ class CreateBodyParser:
 
 		for condition in self.where_list:
 			self.depend = set()
+			negate_sub_logic_list = collect_negate_list(condition)
 			cond_expr = list_strip(re.split("[+,-,*,/,%,^,!,==,=,(,),' ',',']", condition))
 			_get_all_maps(cond_expr, self.cond_depend, where_access=True)
+
+			self.negate_sub_logic = {}
+			for sub_logic in negate_sub_logic_list:
+				condition = condition.replace(sub_logic, ' ')
+
+			global_depend = {}
+			cond_expr = list_strip(re.split("[+,-,*,/,%,^,!,==,=,(,),' ',',']", condition))
+
+			for expr in cond_expr:
+					lexer = BodyLexer(self.fn, expr)
+					tokens = lexer.make_tokens()
+					_, _, var_map, _ = get_access_maps(tokens, self.var_list, self.value_list)
+					global_depend.update(var_map)
+					
+			for sub_logic in negate_sub_logic_list:
+				cond_expr = list_strip(re.split("[+,-,*,/,%,^,!,==,=,(,),' ',',']", sub_logic))
+				self.negate_sub_logic[sub_logic] = {'local_depend':[], 
+													'global_depend':[]}
+				for expr in cond_expr:
+					lexer = BodyLexer(self.fn, expr)
+					tokens = lexer.make_tokens()
+					_, _, var_map, _ = get_access_maps(tokens, self.var_list, self.value_list)
+
+					for k, v in var_map.items():
+						if k not in self.map_list.keys():
+							if k in global_depend.keys():
+								self.negate_sub_logic[sub_logic]['global_depend'].append(k)
+							else:
+								self.negate_sub_logic[sub_logic]['local_depend'].append(k)
 
 		_value_to_depend()
 
@@ -915,8 +945,10 @@ class CreateBodyParser:
 				if set(self.cond_depend[i]) <= tmp_var_loop_set:
 					t_map_list = self.where_map_list
 					self.for_loop_list.append((offset, f'con_var_dep_input = {t_map_list}'))
+					t_negate = self.negate_sub_logic
+					self.for_loop_list.append((offset, f'negate_input = {t_negate}'))
 					t_where_string = self.where_list[i]
-					self.for_loop_list.append((offset, f"""if execute_logic('{t_where_string}', con_var_dep_input):"""))
+					self.for_loop_list.append((offset, f"""if execute_logic('{t_where_string}', con_var_dep_input, '', negate_input):"""))
 					offset += 4
 				else:
 					new_cond_list.append(i)
@@ -1443,5 +1475,3 @@ def main():
 
 if __name__=="__main__":
     main()
-
-

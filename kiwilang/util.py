@@ -104,6 +104,20 @@ def find_matching_parenthesis(expression):
     return None
 
 
+def collect_negate_list(input_logic):
+    collect_s = []
+    while input_logic:
+        start = input_logic.find('not', 0)
+        if start == -1:
+            break
+        if input_logic[start:].strip().startswith('('):
+            st,ed = find_matching_parenthesis(input_logic[start:])
+            collect_s.append(input_logic[start:start+ed+1])
+            input_logic = input_logic[start+ed+1:]
+        else:
+            input_logic = input_logic[len('not'):]
+    return collect_s
+
 def collect_eval(input_string, input_p):
     result_str = ''
     tmp_result_str = ''
@@ -164,7 +178,7 @@ def test_logic(ex, value_str):
 def get_ex_keys(ex):
     return (ex.keys() if isinstance(ex, dict) else range(len(ex)))
 
-def execute_logic(con_string, con_var_dep, value_str=''):
+def execute_logic(con_string, con_var_dep, value_str='', negate_sub_logic={}):
     if not con_var_dep:
         return test_logic(con_string, value_str)
 
@@ -179,6 +193,15 @@ def execute_logic(con_string, con_var_dep, value_str=''):
         if test_expr(con_string, value_str):
             return eval_with_var(con_string, value_str)
 
+    for sub_logic, depens in negate_sub_logic.items():
+        if (set(depens['global_depend']) - set(con_var_dep.keys()) == set(depens['global_depend'])):
+            local_con_var_dep = {}
+            for k in con_var_dep.keys():
+                if k in depens['local_depend']:
+                    local_con_var_dep[k] = con_var_dep[k]
+            sub_r = execute_logic(sub_logic, local_con_var_dep, value_str)
+            con_string = con_string.replace(sub_logic, f'{sub_r}')
+
     new_con_var_dep = {}
     for k, v in con_var_dep.items():
         if f'[{k}]' in con_string:
@@ -186,19 +209,31 @@ def execute_logic(con_string, con_var_dep, value_str=''):
 
     con_var_dep = new_con_var_dep
 
+    if not con_var_dep:
+        execute_logic(con_string, con_var_dep, value_str)
+
     vr = list(con_var_dep.keys())[0]
     ex = con_var_dep[vr]
 
     del con_var_dep[vr]
 
-    r = False
     t_ex= eval_with_var(ex, value_str)
     
-    for i in get_ex_keys(t_ex):
-        r = execute_logic(con_string, con_var_dep, value_str+f'{vr} = {i};')
-        if r:
-            return r
-    return r   
+    if con_string.startswith('not'):
+        r = True
+        for i in get_ex_keys(t_ex):
+            r = r and execute_logic(con_string, con_var_dep, value_str+f'{vr} = {i};', negate_sub_logic)
+            if not r:
+                return r
+        return r 
+    else:
+        r = False
+        for i in get_ex_keys(t_ex):
+            r = execute_logic(con_string, con_var_dep, value_str+f'{vr} = {i};', negate_sub_logic)
+            if r:
+                return r
+        return r   
+
 
 def execute_code(result, result_v):
     exec(result, globals())
@@ -232,4 +267,5 @@ def draw_conn(connections):
     plt.title("Point-to-Point Link Graph")
     plt.axis('off')  # Turn off the axis
     plt.show()
+
 

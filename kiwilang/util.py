@@ -118,6 +118,47 @@ def collect_logic_list(input_logic, identifier_str='not'):
             input_logic = input_logic[len(identifier_str):]
     return collect_s
 
+def get_var_depend(logic_expr, var_list):
+    var_depend = []
+    s_curr = ''
+
+    for _i in logic_expr:
+        if _i == '[':
+            s_curr = _i
+        elif _i == ']':
+            s_curr = s_curr.strip('[')
+            if s_curr in var_list:
+                var_depend.append(s_curr.strip())
+            s_curr = ''
+        else:
+            s_curr += _i
+    return var_depend
+
+def get_negate_var_depend(condition, var_list):
+    negate_sub_logic_list = collect_logic_list(condition, 'not')
+
+    global_condition = condition
+
+    for sub_logic in negate_sub_logic_list:
+        global_condition = global_condition.replace(sub_logic, ' ')
+
+    global_depend = get_var_depend(global_condition, var_list)
+
+    negate_sub_logic_var = {}
+
+    for sub_logic in negate_sub_logic_list:
+        negate_sub_logic_var[sub_logic] = {'local_depend':[], 
+                                        'global_depend':[]}
+
+        local_var = get_var_depend(sub_logic, var_list)
+        for t_var in local_var:
+            if t_var in global_depend:
+                negate_sub_logic_var[sub_logic]['global_depend'].append(t_var)
+            else:
+                negate_sub_logic_var[sub_logic]['local_depend'].append(t_var)
+
+    return negate_sub_logic_var
+    
 def collect_eval(logic_input_string, input_ps, con_var_dep):
     input_string = logic_input_string
 
@@ -130,8 +171,9 @@ def collect_eval(logic_input_string, input_ps, con_var_dep):
 
     result_list = {}
     for sub_logic in unit_sub_logic_list:
-        result_list[sub_logic] = execute_logic(sub_logic[len('unit'):], con_var_dep, value_str='', negate_sub_logic={})
-
+        negate_sub_logic_var = get_negate_var_depend(sub_logic, con_var_dep.keys())
+        result_list[sub_logic] = execute_logic(sub_logic[len('unit'):], con_var_dep, '', negate_sub_logic_var)
+        
     for r_k, r_v in result_list.items():
         input_string = input_string.replace(r_k, str(r_v))
 

@@ -704,34 +704,39 @@ class CreateBodyParser:
 			cond_expr = list_strip(re.split("[+,-,*,/,%,^,!,==,=,(,),' ',',']", condition))
 			_get_all_maps(cond_expr, self.cond_depend, access='where')
 
-			self.negate_sub_logic = {}
-			for sub_logic in negate_sub_logic_list:
-				condition = condition.replace(sub_logic, ' ')
+			t_condition = condition
 
-			global_depend = {}
-			cond_expr = list_strip(re.split("[+,-,*,/,%,^,!,==,=,(,),' ',',']", condition))
+			def _get_negate_vars():
+				self.negate_sub_logic = {}
+				for sub_logic in negate_sub_logic_list:
+					condition = condition.replace(sub_logic, ' ')
 
-			for expr in cond_expr:
-					lexer = BodyLexer(self.fn, expr)
-					tokens = lexer.make_tokens()
-					_, _, var_map, _ = get_access_maps(tokens, self.var_list, self.value_list)
-					global_depend.update(var_map)
-					
-			for sub_logic in negate_sub_logic_list:
-				cond_expr = list_strip(re.split("[+,-,*,/,%,^,!,==,=,(,),' ',',']", sub_logic))
-				self.negate_sub_logic[sub_logic] = {'local_depend':[], 
-													'global_depend':[]}
+				global_depend = {}
+				cond_expr = list_strip(re.split("[+,-,*,/,%,^,!,==,=,(,),' ',',']", condition))
+
 				for expr in cond_expr:
-					lexer = BodyLexer(self.fn, expr)
-					tokens = lexer.make_tokens()
-					_, _, var_map, _ = get_access_maps(tokens, self.var_list, self.value_list)
+						lexer = BodyLexer(self.fn, expr)
+						tokens = lexer.make_tokens()
+						_, _, var_map, _ = get_access_maps(tokens, self.var_list, self.value_list)
+						global_depend.update(var_map)
+						
+				for sub_logic in negate_sub_logic_list:
+					cond_expr = list_strip(re.split("[+,-,*,/,%,^,!,==,=,(,),' ',',']", sub_logic))
+					self.negate_sub_logic[sub_logic] = {'local_depend':[], 
+														'global_depend':[]}
+					for expr in cond_expr:
+						lexer = BodyLexer(self.fn, expr)
+						tokens = lexer.make_tokens()
+						_, _, var_map, _ = get_access_maps(tokens, self.var_list, self.value_list)
 
-					for k, v in var_map.items():
-						if k not in self.map_list.keys():
-							if k in global_depend.keys():
-								self.negate_sub_logic[sub_logic]['global_depend'].append(k)
-							else:
-								self.negate_sub_logic[sub_logic]['local_depend'].append(k)
+						for k, v in var_map.items():
+							if k not in self.map_list.keys():
+								if k in global_depend.keys():
+									self.negate_sub_logic[sub_logic]['global_depend'].append(k)
+								else:
+									self.negate_sub_logic[sub_logic]['local_depend'].append(k)
+									
+			self.negate_sub_logic = get_negate_var_depend(t_condition, self.where_map_list.keys())
 
 		_value_to_depend()
 

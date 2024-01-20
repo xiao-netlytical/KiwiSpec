@@ -530,8 +530,8 @@ class CreateBodyParser:
 		if self.where_list: 
 			self.where_list = [' and '.join(self.where_list)]
 
-		def _add_var_depend(new_dep, where_access):
-			if where_access:
+		def _add_var_depend(new_dep, access):
+			if 'where' == access:
 				t_new_dep = set(new_dep)
 				for i in new_dep:
 					t_new_dep = t_new_dep - set(i)
@@ -558,14 +558,14 @@ class CreateBodyParser:
 			for i in range(len(self.value_list)):
 				self.value_depend[self.value_list[i]] = self.assign_depend[i]
 
-		def _get_all_maps(exprs, depend_list, group_by_var=set(), exclude_list=[], where_access=False):
+		def _get_all_maps(exprs, depend_list, group_by_var=set(), exclude_list=[], access=''):
 			for expr in exprs:
 				lexer = BodyLexer(self.fn, expr)
 				tokens = lexer.make_tokens()
 
 				all_depend, var_depend, var_map, access_s_map = get_access_maps(tokens, self.var_list, self.value_list, exclude_list)
 				
-				if where_access:
+				if 'where' == access:
 					for k, v in var_map.items():
 						if k not in self.map_list.keys():
 							self.where_map_list[k] = v
@@ -573,7 +573,7 @@ class CreateBodyParser:
 					self.map_list.update(var_map)
 				
 				if all_depend:
-					if where_access:
+					if 'where' == access:
 						for where_d in all_depend:
 							if where_d in self.map_list.keys() or where_d in self.value_list:
 								self.depend.add(where_d)
@@ -581,13 +581,13 @@ class CreateBodyParser:
 						self.depend = self.depend.union(all_depend)
 
 				if var_depend:
-					_add_var_depend(var_depend, where_access)
+					_add_var_depend(var_depend, access)
 
 				for access_map in access_s_map:
-					if where_access:
+					if 'where' == access:
 						if access_map and access_map not in self.where_access_map_list:
 							self.where_access_map_list.append(access_map)
-					else:
+					elif access != 'eval':
 						if access_map and access_map not in self.access_map_list:
 							self.access_map_list.append(access_map)
 			
@@ -596,6 +596,7 @@ class CreateBodyParser:
 		for assign in self.assign_list:
 			self.depend = set()
 			exclude_list = []
+			access = ''
 			import re
 			if str_in(' as ', assign):
 				assign_ex, assign_value = list_strip(split(assign, ' as '))
@@ -646,12 +647,13 @@ class CreateBodyParser:
 				assign_ex = strip_operator(assign_ex.strip(), s)
 				assign_ex = assign_ex.strip()
 			elif 'collect eval' in assign_ex:
+				access = 'eval'
 				if str_in(' group by ', assign_ex):
 					assign_ex, group_by = split(assign_ex, ' group by ')
 					exclude_list = list_strip(group_by.split(','))
 				assign_ex = strip_operator(assign_ex.strip(), ['collect eval'])
-				logic_define = get_logic_define(assign_ex)
-				local_assign_ex = assign_ex[len(logic_define)+2:].strip().strip(',')
+				assign_ex_list = assign_ex.split(':')
+				local_assign_ex = assign_ex_list[1]
 				local_assign_expr = list_strip(re.split("[+,-,*,/,%,^,!,=,(,),' ',',','{','}']", local_assign_ex))
 				var_map_list = {}
 				for expr in local_assign_expr:
@@ -665,13 +667,25 @@ class CreateBodyParser:
 									'group_by': var_map_list,
 									'agg_op': 'eval'}
 
+				local_ex = assign_ex_list[0]
+				local_expr = list_strip(re.split("[+,-,*,/,%,^,!,=,(,),' ',',','{','}']", local_ex))
+
+				for expr in local_expr:
+					lexer = BodyLexer(self.fn, expr)
+					tokens = lexer.make_tokens()
+				
+					_, _, _,  access_s_map = get_access_maps(tokens, self.var_list, self.value_list)
+					for access_map in access_s_map:
+						if access_map and access_map not in self.access_map_list:
+							self.access_map_list.append(access_map)
+
 			else:
 				self.group_by_var.add(assign_value)
 
 			assign_ex = assign_ex.replace(' where ', ' ').replace(' WHERE ', ' ')
 
 			assign_expr = list_strip(re.split("[+,-,*,/,%,^,!,=,(,),' ',',','{','}']", assign_ex))
-			_get_all_maps(assign_expr, self.assign_depend, group_by_var, exclude_list)
+			_get_all_maps(assign_expr, self.assign_depend, group_by_var, exclude_list, access)
 
 		print("self.assign_depend:", self.assign_depend)
 		print("self.value_list:", self.value_list)
@@ -686,9 +700,9 @@ class CreateBodyParser:
 
 		for condition in self.where_list:
 			self.depend = set()
-			negate_sub_logic_list = collect_negate_list(condition)
+			negate_sub_logic_list = collect_logic_list(condition, 'not')
 			cond_expr = list_strip(re.split("[+,-,*,/,%,^,!,==,=,(,),' ',',']", condition))
-			_get_all_maps(cond_expr, self.cond_depend, where_access=True)
+			_get_all_maps(cond_expr, self.cond_depend, access='where')
 
 			self.negate_sub_logic = {}
 			for sub_logic in negate_sub_logic_list:
@@ -899,22 +913,15 @@ class CreateBodyParser:
 							local_offset=offset
 							self.for_loop_list.append((local_offset, f"{va} = False"))
 							exs = strip_operator(vu.strip(), ['collect eval'])
-							logic_define=get_logic_define(exs)
-							exs_list = exs[len(logic_define)+2:].strip().strip(",").split(',')
-							self.for_loop_list.append((offset, f'logic_ex = {logic_define}'))
-
-							for v_key, v_value in self.var_agg_map[va]['group_by'].items():
-								self.for_loop_list.append((local_offset, f'for {v_key} in {v_value}.keys() if isinstance({v_value}, dict) else range(len({v_value})):'))
-								local_offset += 4
-
-							self.for_loop_list.append((local_offset, "input_p = ''"))
-							for ex in exs_list:
-								ex_l, ex_r = list_strip(ex.split('='))
-								self.for_loop_list.append((local_offset, f'input_p += f"""{ex_l} = "{{{ex_r}}}";""" if isinstance({ex_r}, str) else f"""{ex_l} = {{{ex_r}}};"""'))
-							self.for_loop_list.append((local_offset, f'{va}, logic_ex = collect_eval(logic_ex, input_p)'))
-							while (local_offset != offset):
-								self.for_loop_list.append((local_offset, f'if {va}:break'))
-								local_offset -= 4
+							assign_ex_list = exs.split(':')
+							logic_ex = assign_ex_list[0]
+							input_p = assign_ex_list[1]
+							if logic_ex.strip().startswith('"'):
+								self.for_loop_list.append((local_offset, f"""_logic_ex = {logic_ex}"""))
+							else:
+								self.for_loop_list.append((local_offset, f"""_logic_ex = {logic_ex}"""))
+								# self.for_loop_list.append((local_offset, f"""_logic_ex = f'{{{logic_ex}}}'"""))
+							self.for_loop_list.append((local_offset, f"""{va} = collect_eval(_logic_ex, '{input_p}', {self.var_agg_map[va]['group_by']})"""))
 
 						if self.var_agg_map[va]['agg_op'] == 'aggregate':
 							put_collect_aggregate()
@@ -1475,3 +1482,5 @@ def main():
 
 if __name__=="__main__":
     main()
+
+

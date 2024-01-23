@@ -1,0 +1,47 @@
+[
+    {
+        "app_name": "AAAServer",
+        "lookup_condition": "unit(proto ==\"udp\" and port==1812 or proto ==\"udp\" and port==1645) and unit(proto ==\"udp\" and port==1812 or proto ==\"udp\" and port==1646) and unit(proto ==\"udp\" and port==1813 or proto ==\"udp\" and port==1645) and unit(proto ==\"udp\" and port==1813 or proto ==\"udp\" and port==1646)"
+    },
+    {
+        "app_name": "ActiveDirectory",
+        "lookup_condition": "unit(proto ==\"tcp\" and port==135) and unit(proto ==\"tcp\" and port==389 or proto ==\"tcp\" and port==88) and unit(proto ==\"udp\" and port==389 or proto ==\"udp\" and port==88) and unit(proto ==\"tcp\" and port==636 or proto ==\"tcp\" and port==88) and unit(proto ==\"udp\" and port==636 or proto ==\"udp\" and port==88)"
+    },
+    {
+        "app_name": "MongoDB",
+        "lookup_condition": "unit(proto ==\"tcp\" and port==27017 or proto ==\"tcp\" and port==27018 or proto ==\"tcp\" and port==27019)"
+    },
+    {
+        "app_name": "MSSQL",
+        "lookup_condition": "unit(proto ==\"tcp\" and port==1433 or proto ==\"tcp\" and port==1434 or proto ==\"udp\" and port==1434)"
+    },
+    {
+        "app_name": "MYSQL (formerly MySQL)",
+        "lookup_condition":  "unit(proto ==\"tcp\" and port==3306 or proto ==\"tcp\" and port==33060)"
+    },
+    {
+        "app_name": "Oracle",
+        "lookup_condition":  "unit(proto ==\"tcp\" and port==1521)"
+    },
+    {
+        "app_name": "PostgresSQL",
+        "lookup_condition":  "unit(proto ==\"tcp\" and port==5432)"
+    },
+    {
+        "app_name": "TFTP Server",
+        "lookup_condition":  "unit(proto ==\"udp\" and port==69)"
+    },
+    {
+        "app_name": "FTPServer",
+        "lookup_condition":  "unit(proto ==\"tcp\" and port==21)"
+    },
+    {
+        "app_name": "DNSServer",
+        "lookup_condition":  "unit(proto ==\"tcp\" and port==53 or proto ==\"udp\" and port==53)"
+    },
+    {
+        "app_name": "NTPServer",
+        "lookup_condition":  "unit(proto ==\"tcp\" and port==123)"
+    }
+
+]

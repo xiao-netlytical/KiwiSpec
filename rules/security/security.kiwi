@@ -14,15 +14,14 @@ var i  select
     order by dns_requests desc
 write write_path/top_dns_sender.json from r
 
-#every one minute sampling of a five minute interval, get DNS request count for per window and per source address
+#every five minute interval, get DNS request count for per window and per source address
 read read_path/conn.json as flows
 create {window_start: {dns_src: cnt}}  as r
-var i,j select
+var i  select
     flows[i]["id.orig_h"] as dns_src;
-    int(epoch_time(flows[i]["ts"])/60) as window_start;
-    count distinct(j from flows[j]) group by dns_src, window_start as cnt;
-where flows[j]["id.resp_p"] == 53; flows[j]["id.orig_h"] == dns_src;
-int(epoch_time(flows[j]["ts"])/60) >= window_start and int(epoch_time(flows[j]["ts"])/60) < window_start + 5
+    int(epoch_time(flows[i]["ts"])/300) as window_start;
+    count distinct(i) group by dns_src, window_start as cnt;
+where flows[i]["id.resp_p"] == 53
 write write_path/5_min_dns_request.json from r
 
 # aggregate the connections between a source and destination pair, 
@@ -38,7 +37,7 @@ order by relationship desc
 write write_path/top_out_rel.json from r
 
 #Discovery-Network Service Scanning 
-read read_path as flows
+read read_path/conn.json as flows
 CREATE [{"source": source, "dport":dport, "dhost": dhost}] as r
 VAR i SELECT
     flows[i]["id.orig_h"] as source;

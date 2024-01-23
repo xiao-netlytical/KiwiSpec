@@ -395,14 +395,3 @@ VAR i SELECT
     where t_status in ["S0", "REJ"]
 WRITE write_path/deny_traffic_agg.json FROM r
 
-####################
-READ conn_path/conn.json AS flows; output_path/ip_to_servers.json AS srv
-create   [path_recording] as result
-var i, j select
-    flows[i]["id.orig_h"] AS s_ip_1;
-    flows[i]["id.resp_h"] AS d_ip_1;
-    flows[j]["id.orig_h"] AS s_ip_2;
-    flows[j]["id.resp_h"] AS d_ip_2;
-    collect set ((s_ip_1, d_ip_1)) where d_ip_1 == s_ip_2 extend by (s_ip_2, d_ip_2) as path_recording;
-where flows[i]["id.resp_p"] == 445; flows[j]["id.resp_p"] == 445
-WRITE output_path/path_recording.json FROM result

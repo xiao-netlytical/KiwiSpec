@@ -189,7 +189,7 @@ def get_sub_cond(con):
 
 def eval_with_var(ex, value_str):
     if value_str:
-        exec(value_str, globals())
+        exec(value_str.replace('\n', ' '), globals())
     return eval(ex)
 
 def test_expr(ex, value_str):

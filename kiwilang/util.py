@@ -39,13 +39,13 @@ def _eval_logic_fix_range(logic_range, input):
             range_unit[i_range] = [int(r[0]), int(r[1])]
     if not range_unit:
         return input
-    for i in input:
-        a,b = i.split('_')
-        port_i = int(i[len(a)+1:])
-        port_s = i
-        for k, r_i in range_unit.items():
+    for _i in input:
+        a,b = _i.split('_')
+        port_i = int(_i[len(a)+1:])
+        port_s = _i
+        for _k, r_i in range_unit.items():
             if port_i >= r_i[0] and port_i <= r_i[1]:
-                port_s = k
+                port_s = _k
                 break
         input_unit.append(port_s) 
     return input_unit
@@ -56,12 +56,12 @@ def eval_logic_expr(logic_input, input):
     global rst
     rep = {"(": " ", ")": " ", " and ": " ", " or ": " "}
     logic_b = logic_input
-    for k, v in rep.items():
-        logic_b = logic_b.replace(k, v)
+    for _k, _v in rep.items():
+        logic_b = logic_b.replace(_k, _v)
     logic_unit = logic_b.split()
     input_unit = _eval_logic_fix_range(logic_unit, input)
-    logic_b = ''.join([x+'=False;' for x in logic_unit])
-    input_b = ''.join([x+'=True;' for x in input_unit])
+    logic_b = ''.join([_x+'=False;' for _x in logic_unit])
+    input_b = ''.join([_x+'=True;' for _x in input_unit])
     r = 'rst='+logic_input
     exec(logic_b + input_b + r, globals())
     return rst
@@ -73,8 +73,8 @@ def get_application_protocol(logic_input):
         return []
     rep = {"(": " ", ")": " ", "and": " ", "or": " "}
     logic_b = logic_input
-    for k, v in rep.items():
-        logic_b = logic_b.replace(k, v)
+    for _k, _v in rep.items():
+        logic_b = logic_b.replace(_k, _v)
     logic_unit = logic_b.split()
     return logic_unit
 
@@ -92,22 +92,22 @@ def init_util():
 def find_matching_parenthesis(expression):
     count = 0
     s = 0
-    for i, char in enumerate(expression):
+    for _i, char in enumerate(expression):
         if char == '(':
             if count == 0:
-                s = i
+                s = _i
             count += 1
         elif char == ')':
             count -= 1
             if count == 0:
-                return (s, i)
+                return (s, _i)
     return None
 
 
 def collect_logic_list(input_logic, identifier_str='not'):
     collect_s = []
     while input_logic:
-        start = input_logic.find(identifier_str, 0)
+        start = input_logic.lower().find(identifier_str, 0)
         if start == -1:
             break
         if input_logic[start+len(identifier_str):].strip().startswith('('):
@@ -159,13 +159,14 @@ def get_negate_var_depend(condition, var_list):
 
     return negate_sub_logic_var
     
+
 def collect_eval(logic_input_string, input_ps, con_var_dep):
     input_string = logic_input_string
 
     input_p_list = input_ps.split(',')
     for input_p in input_p_list:
-        k,v = input_p.split('=')
-        input_string = input_string.replace(k.strip(), v.strip())
+        _k,_v = input_p.split('=')
+        input_string = input_string.replace(_k.strip(), _v.strip())
 
     unit_sub_logic_list = collect_logic_list(input_string, 'unit')
 
@@ -173,7 +174,7 @@ def collect_eval(logic_input_string, input_ps, con_var_dep):
     for sub_logic in unit_sub_logic_list:
         negate_sub_logic_var = get_negate_var_depend(sub_logic, con_var_dep.keys())
         result_list[sub_logic] = execute_logic(sub_logic[len('unit'):], con_var_dep, '', negate_sub_logic_var)
-        
+
     for r_k, r_v in result_list.items():
         input_string = input_string.replace(r_k, str(r_v))
 
@@ -216,7 +217,7 @@ def execute_logic(con_string, con_var_dep, value_str='', negate_sub_logic={}):
     ex = con_var_dep[vr]
     if not test_expr(ex, value_str):
         for ei in con_string_list:
-            if ei.strip() != 'not' and ex in ei:
+            if ei.lower().strip() != 'not' and ex in ei:
                 con_string = con_string.replace(ei, ' False ')
 
         if test_expr(con_string, value_str):
@@ -225,16 +226,16 @@ def execute_logic(con_string, con_var_dep, value_str='', negate_sub_logic={}):
     for sub_logic, depens in negate_sub_logic.items():
         if (set(depens['global_depend']) - set(con_var_dep.keys()) == set(depens['global_depend'])):
             local_con_var_dep = {}
-            for k in con_var_dep.keys():
-                if k in depens['local_depend']:
-                    local_con_var_dep[k] = con_var_dep[k]
+            for _k in con_var_dep.keys():
+                if _k in depens['local_depend']:
+                    local_con_var_dep[_k] = con_var_dep[_k]
             sub_r = execute_logic(sub_logic, local_con_var_dep, value_str)
             con_string = con_string.replace(sub_logic, f'{sub_r}')
 
     new_con_var_dep = {}
-    for k, v in con_var_dep.items():
-        if f'[{k}]' in con_string:
-            new_con_var_dep[k] = v 
+    for _k, _v in con_var_dep.items():
+        if f'[{_k}]' in con_string:
+            new_con_var_dep[_k] = _v 
 
     con_var_dep = new_con_var_dep
 
@@ -248,20 +249,20 @@ def execute_logic(con_string, con_var_dep, value_str='', negate_sub_logic={}):
 
     t_ex= eval_with_var(ex, value_str)
     
-    if con_string.startswith('not'):
+    if con_string.lower().startswith('not'):
         r = True
-        for i in get_ex_keys(t_ex):
+        for _i in get_ex_keys(t_ex):
             r = r and execute_logic(con_string, con_var_dep, 
-                                    value_str+f'{vr} = "{i}";' if isinstance(i, str) else value_str+f'{vr} = {i};', 
+                                    value_str+f'{vr} = "{_i}";' if isinstance(_i, str) else value_str+f'{vr} = {_i};', 
                                     negate_sub_logic)
             if not r:
                 return r
         return r 
     else:
         r = False
-        for i in get_ex_keys(t_ex):
+        for _i in get_ex_keys(t_ex):
             r = execute_logic(con_string, con_var_dep, 
-                                    value_str+f'{vr} = "{i}";' if isinstance(i, str) else value_str+f'{vr} = {i};', 
+                                    value_str+f'{vr} = "{_i}";' if isinstance(_i, str) else value_str+f'{vr} = {_i};', 
                                     negate_sub_logic)
             if r:
                 return r
@@ -300,3 +301,5 @@ def draw_conn(connections):
     plt.title("Point-to-Point Link Graph")
     plt.axis('off')  # Turn off the axis
     plt.show()
+
+

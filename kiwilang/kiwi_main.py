@@ -236,15 +236,15 @@ class CreateResultParser:
 	def preparse(self):
 		r_head ="init_util()\n"
 		r_head += 'default_group_by="default_group_by"\n'
-		for k in self.var_agg_map.keys():
-			if self.var_agg_map[k]["op"] in ['collect list', 'collect set', 'count distinct', 'sum', 'min', 'max']:
+		for _k in self.var_agg_map.keys():
+			if self.var_agg_map[_k]["op"] in ['collect list', 'collect set', 'count distinct', 'sum', 'min', 'max']:
 				tmp = '{}'
-				r_head += f"""{k} = {tmp}\n"""
-				r_head += f"""_{k}_check = []\n"""
-				r_head += f"""_{k}_flag = True\n"""
-			if self.var_agg_map[k]["op"] == 'count distinct':
+				r_head += f"""{_k} = {tmp}\n"""
+				r_head += f"""_{_k}_check = []\n"""
+				r_head += f"""_{_k}_flag = True\n"""
+			if self.var_agg_map[_k]["op"] == 'count distinct':
 				tmp = '{}'
-				r_head += f"""{k}_ = {tmp}\n"""
+				r_head += f"""{_k}_ = {tmp}\n"""
 		return r_head
 
 	def parse(self):
@@ -463,16 +463,16 @@ def fix_default_format(assign_a):
 def check_access_map(access_map_list, check_str):
 	match_str_list = []
 	tmp_access_map_list = []
-	for i in access_map_list:
-		if f"{i[0]}[{i[1]}]" in check_str.replace(' ', ''):
-			match_str_list.append(i)
+	for _i in access_map_list:
+		if f"{_i[0]}[{_i[1]}]" in check_str.replace(' ', ''):
+			match_str_list.append(_i)
 		else:
-			tmp_access_map_list.append(i)
+			tmp_access_map_list.append(_i)
 	con_collect = ''
 	if match_str_list:
 		con_collect = 'if '
-		for i in match_str_list:
-			con_collect += f""" ({i[1]} in {i[0]}.keys() if isinstance({i[0]}, dict) else {i[1]} in range(len({i[0]}))) and """
+		for _i in match_str_list:
+			con_collect += f""" ({_i[1]} in {_i[0]}.keys() if isinstance({_i[0]}, dict) else {_i[1]} in range(len({_i[0]}))) and """
 		con_collect = con_collect[:-4] + ':'
 	return con_collect, tmp_access_map_list
 
@@ -533,30 +533,30 @@ class CreateBodyParser:
 		def _add_var_depend(new_dep, access):
 			if 'where' == access:
 				t_new_dep = set(new_dep)
-				for i in new_dep:
-					t_new_dep = t_new_dep - set(i)
+				for _i in new_dep:
+					t_new_dep = t_new_dep - set(_i)
 				f_new_dep = []
-				for i in new_dep:
-					if i in t_new_dep:
-						f_new_dep.append(i)	
+				for _i in new_dep:
+					if _i in t_new_dep:
+						f_new_dep.append(_i)	
 				self.where_var_depend.append(f_new_dep)
 			else:
-				for i in self.var_depend:
-					if set(new_dep) <= set(i):
+				for _i in self.var_depend:
+					if set(new_dep) <= set(_i):
 							return
 				self.var_depend.append(new_dep)
 
 		def _startwith_agg(s, assign):
-			for i in s:
-				if assign.strip().lower().startswith(i):
-					return i
+			for _i in s:
+				if assign.strip().lower().startswith(_i):
+					return _i
 			return None
 
 		def _value_to_depend():
 			self.value_depend = {}
 
-			for i in range(len(self.value_list)):
-				self.value_depend[self.value_list[i]] = self.assign_depend[i]
+			for _i in range(len(self.value_list)):
+				self.value_depend[self.value_list[_i]] = self.assign_depend[_i]
 
 		def _get_all_maps(exprs, depend_list, group_by_var=set(), exclude_list=[], access=''):
 			for expr in exprs:
@@ -566,9 +566,9 @@ class CreateBodyParser:
 				all_depend, var_depend, var_map, access_s_map = get_access_maps(tokens, self.var_list, self.value_list, exclude_list)
 				
 				if 'where' == access:
-					for k, v in var_map.items():
-						if k not in self.map_list.keys():
-							self.where_map_list[k] = v
+					for _k, _v in var_map.items():
+						if _k not in self.map_list.keys():
+							self.where_map_list[_k] = _v
 				else:
 					self.map_list.update(var_map)
 				
@@ -646,7 +646,7 @@ class CreateBodyParser:
 					group_by_var = self.group_by_var
 				assign_ex = strip_operator(assign_ex.strip(), s)
 				assign_ex = assign_ex.strip()
-			elif 'collect eval' in assign_ex:
+			elif str_in('collect eval', assign_ex):
 				access = 'eval'
 				if str_in(' group by ', assign_ex):
 					assign_ex, group_by = split(assign_ex, ' group by ')
@@ -660,9 +660,9 @@ class CreateBodyParser:
 					lexer = BodyLexer(self.fn, expr)
 					tokens = lexer.make_tokens()
 					_, _, var_map, _ = get_access_maps(tokens, self.var_list, self.value_list)
-					for k,v in var_map.items():
-						if k in group_by:
-							var_map_list[k] = v
+					for _k,_v in var_map.items():
+						if _k in group_by:
+							var_map_list[_k] = _v
 				self.var_agg_map[assign_value] = {'op':'collect eval',
 									'group_by': var_map_list,
 									'agg_op': 'eval'}
@@ -690,23 +690,23 @@ class CreateBodyParser:
 		print("self.assign_depend:", self.assign_depend)
 		print("self.value_list:", self.value_list)
 
-		for i in self.var_agg_map.keys():
+		for _i in self.var_agg_map.keys():
 			group_by = ','.join(list(self.group_by_var))
-			if self.var_agg_map[i]['group_by'] == '(NONE)' or group_by == '':
+			if self.var_agg_map[_i]['group_by'] == '(NONE)' or group_by == '':
 				group_by = 'default_group_by'
-				self.var_agg_map[i]['group_by'] = '('+group_by+')'			
-			elif self.var_agg_map[i]['group_by'] == 'default_group_by':
-				self.var_agg_map[i]['group_by'] = '('+group_by+')'
+				self.var_agg_map[_i]['group_by'] = '('+group_by+')'			
+			elif self.var_agg_map[_i]['group_by'] == 'default_group_by':
+				self.var_agg_map[_i]['group_by'] = '('+group_by+')'
 
 		for condition in self.where_list:
 			self.depend = set()
-			negate_sub_logic_list = collect_logic_list(condition, 'not')
 			cond_expr = list_strip(re.split("[+,-,*,/,%,^,!,==,=,(,),' ',',']", condition))
 			_get_all_maps(cond_expr, self.cond_depend, access='where')
 
 			t_condition = condition
 
 			def _get_negate_vars():
+				negate_sub_logic_list = collect_logic_list(condition, 'not')
 				self.negate_sub_logic = {}
 				for sub_logic in negate_sub_logic_list:
 					condition = condition.replace(sub_logic, ' ')
@@ -729,13 +729,13 @@ class CreateBodyParser:
 						tokens = lexer.make_tokens()
 						_, _, var_map, _ = get_access_maps(tokens, self.var_list, self.value_list)
 
-						for k, v in var_map.items():
-							if k not in self.map_list.keys():
-								if k in global_depend.keys():
-									self.negate_sub_logic[sub_logic]['global_depend'].append(k)
+						for _k, _v in var_map.items():
+							if _k not in self.map_list.keys():
+								if _k in global_depend.keys():
+									self.negate_sub_logic[sub_logic]['global_depend'].append(_k)
 								else:
-									self.negate_sub_logic[sub_logic]['local_depend'].append(k)
-									
+									self.negate_sub_logic[sub_logic]['local_depend'].append(_k)
+
 			self.negate_sub_logic = get_negate_var_depend(t_condition, self.where_map_list.keys())
 
 		_value_to_depend()
@@ -810,8 +810,8 @@ class CreateBodyParser:
 					continue
 				
 				group_by_var_depend = set()
-				for i in group_by_var_list:
-					group_by_var_depend |= self.value_depend[i] & set(self.var_list) 
+				for _i in group_by_var_list:
+					group_by_var_depend |= self.value_depend[_i] & set(self.var_list) 
 
 				g_var_depend = self.value_depend[g_var] & set(self.var_list)
 				loop_depend_var = group_by_var_depend & g_var_depend
@@ -828,18 +828,18 @@ class CreateBodyParser:
 		def _put_assignment_clause(curr_assign_list, curr_cond_list, offset):
 			new_assign_list = []
 			curr_cond_list, offset = _put_where_clause(curr_cond_list, offset)
-			for i in curr_assign_list:
-				if set(self.assign_depend[i]) <= tmp_var_loop_set:
-					if not str_in(' as ', self.assign_list[i]):
-						if str_in(' from ', self.assign_list[i]):
-							va, _ = split(self.assign_list[i], ' from ')
+			for _i in curr_assign_list:
+				if set(self.assign_depend[_i]) <= tmp_var_loop_set:
+					if not str_in(' as ', self.assign_list[_i]):
+						if str_in(' from ', self.assign_list[_i]):
+							va, _ = split(self.assign_list[_i], ' from ')
 							vu = va
 							for r, v_list in self.result_value_list.items():
 								if va in v_list:
 									self.r_tuple[r] = self.r_tuple.setdefault(r, '') + f"""'{va}':{va},"""
 						continue
 					tmp_collect = False
-					vu, va = list_strip(split(self.assign_list[i], ' as '))
+					vu, va = list_strip(split(self.assign_list[_i], ' as '))
 					vu_if = ''
 					if va in self.var_agg_map.keys():
 						if str_in(' group by ',vu):
@@ -948,22 +948,22 @@ class CreateBodyParser:
 
 					curr_cond_list, offset = _put_where_clause(curr_cond_list, offset)
 				else:
-					new_assign_list.append(i)
+					new_assign_list.append(_i)
 			return new_assign_list, curr_cond_list, offset
 
 		def _put_where_clause(curr_cond_list, offset):
 			new_cond_list = []
-			for i in curr_cond_list:
-				if set(self.cond_depend[i]) <= tmp_var_loop_set:
+			for _i in curr_cond_list:
+				if set(self.cond_depend[_i]) <= tmp_var_loop_set:
 					t_map_list = self.where_map_list
 					self.for_loop_list.append((offset, f'con_var_dep_input = {t_map_list}'))
 					t_negate = self.negate_sub_logic
 					self.for_loop_list.append((offset, f'negate_input = {t_negate}'))
-					t_where_string = self.where_list[i]
+					t_where_string = self.where_list[_i]
 					self.for_loop_list.append((offset, f"""if execute_logic('{t_where_string}', con_var_dep_input, '', negate_input):"""))
 					offset += 4
 				else:
-					new_cond_list.append(i)
+					new_cond_list.append(_i)
 			return new_cond_list, offset
 		
 		curr_assign_list, curr_cond_list, offset = _put_assignment_clause(curr_assign_list, curr_cond_list, offset)
@@ -1034,8 +1034,8 @@ class UpdateBodyParser:
 		self.where_list = [fix_default_format(i) for i in self.where_list]
 
 		def _add_var_depend(new_dep):
-			for i in self.var_depend:
-				if set(new_dep) <= set(i):
+			for _i in self.var_depend:
+				if set(new_dep) <= set(_i):
 						return
 			self.var_depend.append(new_dep)
 
@@ -1057,8 +1057,8 @@ class UpdateBodyParser:
 				lexer = BodyLexer(self.fn, expr)
 				tokens = lexer.make_tokens()
 
-				for i in range(len(tokens)):
-					if tokens[i].value in '[]':
+				for _i in range(len(tokens)):
+					if tokens[_i].value in '[]':
 						continue
 					a_depend, var_depend, var_map, access_s_map = get_access_maps(tokens, self.var_list, [])
 
@@ -1106,10 +1106,10 @@ class UpdateBodyParser:
 
 		def _put_assignment_clause(curr_assign_list):
 			new_assign_list = []
-			for i in curr_assign_list:
-				if set(self.assign_depend[i]) <= tmp_var_loop_set:
-					if str_in(' as ', self.assign_list[i]):
-						vu, va = list_strip(split(self.assign_list[i],' as '))
+			for _i in curr_assign_list:
+				if set(self.assign_depend[_i]) <= tmp_var_loop_set:
+					if str_in(' as ', self.assign_list[_i]):
+						vu, va = list_strip(split(self.assign_list[_i],' as '))
 						for v_i in [va]:
 							check_str, self.access_map_list = check_access_map(self.access_map_list, v_i)
 							if check_str:
@@ -1118,24 +1118,24 @@ class UpdateBodyParser:
 							va = vu.replace("|", "+")
 						self.for_loop_list.append(f"""{vu} = {va}""")
 
-					if str_in(' order by ', self.assign_list[i]):
-						vu, va = list_strip(split(self.assign_list[i],' order by '))
+					if str_in(' order by ', self.assign_list[_i]):
+						vu, va = list_strip(split(self.assign_list[_i],' order by '))
 						check_str, self.access_map_list = check_access_map(self.access_map_list, vu)
-						k,_=va.strip('{}').split(':')
+						_k,_=va.strip('{}').split(':')
 						if check_str:
 							self.for_loop_list.append(check_str)
-						self.for_loop_list.append(f"""sorted({vu}, key=lambda _i: _i[{k}])""")
+						self.for_loop_list.append(f"""sorted({vu}, key=lambda _i: _i[{_k}])""")
 				else:
-					new_assign_list.append(i)
+					new_assign_list.append(_i)
 			return new_assign_list
 
 		def _put_where_clause(curr_cond_list):
 			new_cond_list = []
-			for i in curr_cond_list:
-				if set(self.cond_depend[i]) <= tmp_var_loop_set:
-					self.for_loop_list.append(f'if {self.where_list[i]}:')
+			for _i in curr_cond_list:
+				if set(self.cond_depend[_i]) <= tmp_var_loop_set:
+					self.for_loop_list.append(f'if {self.where_list[_i]}:')
 				else:
-					new_cond_list.append(i)
+					new_cond_list.append(_i)
 			return new_cond_list
 
 		curr_assign_list = _put_assignment_clause(curr_assign_list)
@@ -1389,9 +1389,9 @@ def kiwi(text):
 
 
 def startswith_list(s, l):
-	for i in l:
-		if  s.strip().startswith(i):
-			return i
+	for _i in l:
+		if  s.strip().startswith(_i):
+			return _i
 	return ''
 
 import sys
@@ -1399,9 +1399,9 @@ import sys
 def main():
 
 	def _startswith_list(s, l):
-		for i in l:
-			if  s.strip().lower().startswith(i):
-				return i.lower()
+		for _i in l:
+			if  s.strip().lower().startswith(_i):
+				return _i.lower()
 		return ''
 	
 	def _pass_define(line):
@@ -1409,8 +1409,8 @@ def main():
 		for d in define_list:
 			if not d:
 				continue
-			k, v = d.strip().split('=')
-			path_define[k.strip()] = v.strip()
+			_k, _v = d.strip().split('=')
+			path_define[_k.strip()] = _v.strip()
 	
 	if len(sys.argv) < 2:
 		print("Please provide a filename as an argument")
@@ -1441,8 +1441,8 @@ def main():
 								_pass_define(l)
 						elif mini_buff_start in ['read ', 'write ']:
 							for l in mini_buff:
-								for k,v in path_define.items():
-									l = l.replace(k, v)		
+								for _k,_v in path_define.items():
+									l = l.replace(_k, _v)		
 								line_buffer.append(l)
 						else:
 							line_buffer += mini_buff 
@@ -1458,8 +1458,8 @@ def main():
 						_pass_define(l)
 				elif mini_buff_start in ['read ', 'write ']:
 					for l in mini_buff:
-						for k,v in path_define.items():
-							l = l.replace(k, v)		
+						for _k,_v in path_define.items():
+							l = l.replace(_k, _v)		
 						line_buffer.append(l)
 				else:
 					line_buffer += mini_buff 

@@ -1,7 +1,7 @@
 define conn_path=../sample_data/zeek, write_path=../sample_data/result, 
 application_path=../rules/application, output_path=../sample_data/result
 
-# get all ther unidentified servers and the protocols recieved
+# get all the unidentified servers and the protocols accepted
 READ conn_path/conn.json AS flows; 
 write_path/clean_ip_to_servers.json as ip_servers;
 application_path/proto_desciption.json as proto_disc
@@ -15,7 +15,7 @@ where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"];
 write write_path/unidentified_server_and_proto.json from r
 
 ####################
-# group the unidentified servers and the protocols recieved
+# group the unidentified servers with the protocols recieved
 READ conn_path/conn.json AS flows; 
 write_path/clean_ip_to_servers.json as ip_servers;
 application_path/proto_desciption.json as proto_disc
@@ -33,7 +33,7 @@ where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"];
 write write_path/unidentified_servers.json from r
 
 ####################
-# get all the protocols which is  not identified server supported protocol
+# For an identified server ip, get all the protocols which is not identified as server supported protocol
 READ conn_path/conn.json AS flows; 
 write_path/clean_ip_to_servers.json as ip_servers; 
 application_path/app_protos.json as proto_list;
@@ -83,38 +83,8 @@ VAR i SELECT
 WRITE write_path/baseline_server_to_server_traffic.json FROM r
 
 ####################
-# find failed (no reponse, rejected) traffic between servers
-READ write_path/clean_ip_to_servers.json AS srvs; 
-write_path/clean_server_to_ips.json AS ips;
-conn_path/conn.json AS flows; 
-application_path/app_protos.json as proto_list;
-application_path/proto_desciption.json as proto_disc
-
-CREATE [{"s_srv":s_srv, "d_srv":d_srv, "protos": proto, "disc": disc, "rej_count": rej_count, "permit_count": permit_count, "app_proto":app_proto,  "src_count": s_srv_c, "dst_count": d_srv_c, "s_count": s_count, "d_count":d_count}] AS r
-VAR i SELECT
-	flows[i]["id.orig_h"] as s_ip;
-	flows[i]["id.resp_h"] as d_ip;
-    srvs[s_ip][_] AS s_srv;
-    srvs[d_ip][_] AS d_srv;
-    len(ips[s_srv]) as s_srv_c;
-    len(ips[d_srv]) as d_srv_c;
-    proto_list[d_srv]["in_proto"] as s_protos;
-    flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"]) AS proto;
-    proto_disc[proto | "Unknown"] as disc;
-    flows[i]["conn_state"] == "REJ" as rej;
-    flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"] as permit;
-    count distinct(i) where rej == True GROUP BY s_srv,d_srv,proto AS rej_count;
-    count distinct(i) where permit == True GROUP BY s_srv,d_srv,proto AS permit_count;
-    COUNT DISTINCT(s_ip) group by s_srv,d_srv,proto as s_count;
-    COUNT DISTINCT(d_ip) group by s_srv,d_srv,proto as d_count;
-    proto in s_protos as app_proto;
-
-where flows[i]["conn_state"] in ["S0", "REJ"]
-
-WRITE write_path/server_to_server_reject_proto.json FROM r
-
-####################
-# total identified server count, client count, and unidentified service workload count
+# list of servers, list of clients and list of unidentified service providers.
+# total identified server count, client count, and unidentified service provider count
 READ conn_path/conn.json AS flows;
 write_path/clean_ip_to_servers.json AS srvs
 CREATE ips AS s_ips
@@ -128,26 +98,26 @@ VAR i select
     COLLECT SET(flows[i]["id.orig_h"]) AS ips;
 where flows[i]["id.orig_h"] not in s_ips
 
-CREATE uis AS u_s_ips
+CREATE u_ips AS u_s_ips
 VAR i SELECT 
-	collect set(s_ips[i]) AS uis;
+	collect set(s_ips[i]) AS u_ips;
 where s_ips[i] not in srvs.keys()
 
 
 CREATE c AS count
 var i select
-len(set(s_ips)) as a1;
-len(c_ips) as a2;
-len(srvs.keys()) as a3;
-{"a1":a1, "a2":a2, "a3":a3} as c
+len(set(s_ips)) as service_c;
+len(c_ips) as client_c;
+len(srvs.keys()) as server_c;
+{"service":service_c, "client":client_c, "server":server_c} as c
 
 WRITE write_path/server_ips.json FROM s_ips;
 write_path/client_ips.json FROM c_ips; 
 write_path/unidentified_s_ips.json from u_s_ips;
-write_path/count.json from count
+write_path/workload_count.json from count
 
 ####################
-#explor traffic proto
+#explor server to server traffic profile
 READ write_path/clean_ip_to_servers.json AS srvs; 
 write_path/clean_server_to_ips.json AS ips;
 conn_path/conn.json AS flows; 
@@ -172,7 +142,7 @@ VAR i SELECT
     COUNT DISTINCT(s_ip) group by s_srv,d_srv,proto as s_count;
     COUNT DISTINCT(d_ip) group by s_srv,d_srv,proto as d_count;
     proto in s_protos as app_proto;
-where flows[i]["conn_state"] in ["S0", "REJ", "OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"]
+where flows[i]["conn_state"] in ["S0", "REJ", "OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"];
 
 WRITE write_path/server_to_server_proto_explore.json FROM r	
 
@@ -186,32 +156,30 @@ var i select
 	r[i]["protos"] as proto;
     "rule_"+str(index_by(i)) as r_n;
 	where r[i]["rej_count"] == 0 and r[i]["permit_count"] > 0 and (s_srv != "WebServer" or d_srv != "WebServer");
-	r[i]["disc"] != "Unknown"
-
+	r[i]["disc"] != "Unknown" and r[i]["app_proto"] == True
 
 WRITE write_path/server_to_server_permit_rules.json FROM p_rule
 
 ####################
-# none server permit rules
+# ip/server group to  ip/server group permit rules
 READ write_path/clean_ip_to_servers.json AS srvs; 
 write_path/clean_server_to_ips.json AS ips;
 conn_path/conn.json AS flows; 
 application_path/app_protos.json as proto_list;
 application_path/proto_desciption.json as proto_disc
 
-CREATE [{"src":src, "dst":dst, "proto": proto, "disc": disc}] AS r
+CREATE [{"src":src_g, "dst":dst, "proto": proto, "disc": disc}] AS r
 VAR i SELECT
 	flows[i]["id.orig_h"] as s_ip;
 	flows[i]["id.resp_h"] as d_ip;
     ",".join(srvs[s_ip | []]) AS s_srv;
     ",".join(srvs[d_ip | []]) AS d_srv;
+    s_srv if s_srv and s_srv != "WebServer" else s_ip as src;
     d_srv if d_srv and d_srv != "WebServer" else d_ip as dst;
     flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"]) AS proto;
     proto_disc[proto | "Unknown"] as disc;
-    collect set(s_ip) group by dst, proto as src;
-where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"];
-(not s_srv or s_srv == "WebServer") and (not d_srv or d_srv == "WebServer" ); disc != "Unknown"
-WRITE write_path/permit_rules.json FROM r	
+    collect set(src) group by dst, proto as src_g;
+where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"]; disc != "Unknown"
 
 CREATE [{"src":src, "dst":dst, "proto": proto, "disc": disc}] AS r1
 var i select
@@ -234,7 +202,7 @@ var i select
     "rule_"+str(index_by(src_g, dst_g)) as r_n;
 	collect set(r1[i]["proto"]) group by src_g, dst_g as protos
 
-WRITE write_path/agg_permit_rules.json FROM r2
+WRITE write_path/agg_group_to_group_permit_rules.json FROM r2
 
 ##########
 # explore protocols which is not used to identify a supported known server
@@ -284,16 +252,23 @@ VAR i SELECT
     ",".join(srvs[dip | []]) AS d_srv;
     collect set(s_srv) group by proto as s_srvs;
     collect set(d_srv) group by proto as d_srvs;
-    collect set(flows[i]["conn_state"]) as state;
-    where proto in ["TCP_139", "TCP_3389", "TCP_111", "TCP_47001"]; flows[i]["conn_state"] not in ["S0", "REJ"]
+    collect set(flows[i]["conn_state"]) group by proto as state;
+    ["TCP_80", "UDP_53", "TCP_443", "TCP_21", "TCP_22", "TCP_23", "TCP_25", "UDP_53", 
+    "UDP_161", "UDP_137", "TCP_139", "TCP_445", "TCP_3389", "UDP_123", "TCP_389", 
+    "UDP_67", "UDP_68", "TCP_1723", "UDP_0", "UDP_2", "TCP_179", "TCP_22", "TCP_110", 
+    "TCP_143", "UDP_16384-32767", "TCP_554", "UDP_69", "UDP_500", "UDP_4500", "TCP_995", 
+    "TCP_993", "UDP_123", "TCP_5004-5005", "TCP_5060", "UDP_5060", "TCP_111"] as potential_security_risk;
+    where proto in potential_security_risk; flows[i]["conn_state"] not in ["S0", "REJ"]
 
-WRITE output_path/potential_bad_calls.json from r
+WRITE output_path/potential_security_risk.json from r
 
 ############################
 #using log to create a set of permit rules, 
-#per all the server to server traffic, with identified none server port and known server identification port
-#aggregate all the clients to clients for per protocol
-#aggregate all the clients to a server with identified server port and none server port
+#aggregated servers to aggregated servers based on per protocol
+#aggregated clients to aggregated clients based on per protocol
+#aggregated clients to aggregated servers based on per protocol
+#aggregated servers to aggregated clients based on per protocol
+#the permissions are between the aggregated groups based on the protocol, thses permission rules may be too loose.
 
 READ output_path/clean_ip_to_servers.json AS srvs; 
 output_path/clean_server_to_ips.json AS ips;
@@ -339,6 +314,20 @@ VAR i SELECT
 		flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"]
 WRITE output_path/client_to_server_rules.json from client_to_server_rules
 
+CREATE {proto: {"d_ip":d_ip, "ssrv":ssrv, "disc":disc, "rule":r_n}} AS server_to_client_rules
+VAR i SELECT
+	flows[i]["id.orig_h"] as sip;
+	flows[i]["id.resp_h"] as dip;
+	flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"]) AS proto;
+	proto+":"+proto_disc[proto | "Unknown"] as disc;
+	srvs[sip][_] AS s_srv;
+	collect set(flows[i]["id.resp_h"]) group by proto as d_ip;
+	collect set(s_srv) group by proto as ssrv;
+	"rule_"+str(index_by(proto)) as r_n;
+    where dip not in srv_list and sip in srv_list;
+		flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"]
+WRITE output_path/server_to_client_rules.json from server_to_client_rules
+
 
 CREATE {proto: {"s_ip":ssrv, "dsrv":dsrv, "disc":disc, "rule":r_n}} AS server_rules
 VAR i SELECT
@@ -356,18 +345,8 @@ VAR i SELECT
 		flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"]
 WRITE output_path/server_rules.json from server_rules
 
-create [{"proto":proto, "s_ip":sip, "d_ip":dip}] as r
-var i select
-	flows[i]["id.orig_h"] as sip;
-	flows[i]["id.resp_h"] as dip;
-	flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"]) AS proto;
-where flows[i]["conn_state"] in ["S0", "REJ"];
-	sip not in srv_list and dip not in srv_list and sip in client_rules[proto|{}]["s_ip"|[]] and dip in client_rules[proto|{}]["d_ip"|[]] or sip not in srv_list and dip in srv_list and sip in client_to_server_rules[proto|{}]["s_ip"|[]] and set(srvs[dip]) & set(client_to_server_rules[proto|{}]["d_ip"|[]]) or sip in srv_list and dip in srv_list and set(srvs[sip]) & set(client_to_server_rules[proto|{}]["s_ip"|[]])  and set(srvs[dip]) & set(client_to_server_rules[proto|{}]["d_ip"|[]]) 
-	
-
-WRITE output_path/violate_rules.json from r
 ############################
-
+# get accepted packet and flow count for per source/destination/protocol
 READ conn_path/conn.json AS flows
 CREATE [{"src":s_ip, "dst":d_ip, "o_pkts":o_pkts, "r_pkts":r_pkts, "srv":proto, "flows": ct, "status": t_status}] AS r
 VAR i SELECT
@@ -382,6 +361,7 @@ VAR i SELECT
 WRITE write_path/permit_traffic_agg.json FROM r
 
 ############################
+# get denied packet and flow count for per source/destination/protocol
 READ conn_path/conn.json AS flows
 CREATE [{"src":s_ip, "dst":d_ip, "o_pkts":o_pkts, "r_pkts":r_pkts, "srv":proto, "flows": ct, "status": t_status}] AS r
 VAR i SELECT

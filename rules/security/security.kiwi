@@ -3,6 +3,7 @@ define read_path=../sample_data/zeek,
 read_dns_path=../sample_data/zeek/dns.json, 
 write_path=../sample_data/result
 
+#########################################
 #DNS request for each source address in a five minute window ordered by request count
 read read_path/conn.json as flows
 create {window_start: [{dns_src: dns_requests}]}  as r
@@ -14,6 +15,7 @@ var i  select
     order by dns_requests desc
 write write_path/top_dns_sender.json from r
 
+####################
 #every five minute interval, get DNS request count for per window and per source address
 read read_path/conn.json as flows
 create {window_start: {dns_src: cnt}}  as r
@@ -24,6 +26,7 @@ var i  select
 where flows[i]["id.resp_p"] == 53
 write write_path/5_min_dns_request.json from r
 
+####################
 # aggregate the connections between a source and destination pair, 
 # and sort the source and destination pairs based on the distinct protocols
 read read_path/conn.json as flows
@@ -36,13 +39,16 @@ var i select
 order by relationship desc
 write write_path/top_out_rel.json from r
 
-#Discovery-Network Service Scanning 
-read read_path/conn.json as flows
-CREATE [{"source": source, "dport":dport, "dhost": dhost}] as r
-VAR i SELECT
-    flows[i]["id.orig_h"] as source;
-    COLLECT SET(flows[i]["id.resp_h"]) as  dhost;
-    COLLECT SET(flows[i]["id.resp_p"]) as  dport;
-    where flows[i]["local_orig" | True] and flows[i]["local_resp" | True];    
-    flows[i]["conn_state"] in ["S0", "REJ"]
-write write_path/top_sender.json from r
+####################
+# path recording of the SMB connections
+
+READ read_path/conn.json AS flows; write_path/ip_to_servers.json AS srv
+create   [path_recording] as result
+var i, j select
+    flows[i]["id.orig_h"] AS s_ip_1;
+    flows[i]["id.resp_h"] AS d_ip_1;
+    flows[j]["id.orig_h"] AS s_ip_2;
+    flows[j]["id.resp_h"] AS d_ip_2;
+    collect set ((s_ip_1, d_ip_1)) where d_ip_1 == s_ip_2 extend by (s_ip_2, d_ip_2) as path_recording;
+where flows[i]["id.resp_p"] == 445; flows[j]["id.resp_p"] == 445
+WRITE write_path/path_recording.json FROM result

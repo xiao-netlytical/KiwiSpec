@@ -375,3 +375,15 @@ VAR i SELECT
     where t_status in ["S0", "REJ"]
 WRITE write_path/deny_traffic_agg.json FROM r
 
+##################
+# group all the IPs hosting the servers which the d_ip is hosting
+READ output_path/ip_to_servers.json AS srvs; 
+output_path/server_to_ips.json AS ips;
+conn_path/conn.json AS flows 
+
+CREATE {d_ip: ipg} as r
+VAR i SELECT
+	flows[i]["id.resp_h"] as d_ip;
+    collect set(ips[srvs[d_ip][_]][_]) AS ipg
+WRITE write_path/ip_groups.json FROM r
+

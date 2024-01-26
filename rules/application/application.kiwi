@@ -87,3 +87,39 @@ update var i set
 r1[i]  as ",".join(r1[i])
 WRITE app_define/proto_desciption.json FROM r1
 
+#######################
+# Get server definition using "collect eval"
+read read_path/conn.json as flows; app_define/application_logic.json as application
+
+# application classification logic is defined in application_logic.json file
+# here is an example of the definition:
+#"unit(proto ==\"udp\" and port==1812 or proto ==\"udp\" and port==1645) and 
+#unit(proto ==\"udp\" and port==1812 or proto ==\"udp\" and port==1646) and 
+#unit(proto ==\"udp\" and port==1813 or proto ==\"udp\" and port==1645) and 
+#unit(proto ==\"udp\" and port==1813 or proto ==\"udp\" and port==1646)"
+# The mapping of an IP to the application servers are calculated.
+
+create {ip1:out_port} as r_src; {ip2:in_port} as r_dst 
+var i select
+    flows[i]["id.orig_h"] as ip1;
+    collect set((flows[i]["proto"], flows[i]["id.resp_p"])) group by ip1 as out_port;
+    flows[i]["id.resp_h"] as ip2;
+    collect set((flows[i]["proto"], flows[i]["id.resp_p"])) group by ip2 as in_port;
+    where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"]
+
+create {ip:apps} as r 
+var ip, k, x, y select 
+    r_dst[ip] as in_p_set; 
+    r_src[ip | []] as out_p_set; 
+    collect eval(application[k]["lookup_condition"]: proto=in_p_set[x][0], port=in_p_set[x][1], out_proto =out_p_set[y][0], out_port=out_p_set[y][1]) group by x,y as app_condition;
+    collect list(application[k]["app_name"]) where app_condition group by ip as apps
+
+WRITE write_path/ip_apps_t.json from r
+
+# This spec strip of the IP to empty server list mapping
+create {i:result} as r1
+var i select
+	r[i] as result;
+	where result
+
+WRITE write_path/ip_apps.json from r1

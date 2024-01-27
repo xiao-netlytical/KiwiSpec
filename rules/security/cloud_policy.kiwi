@@ -1,0 +1,56 @@
+define read_path=../sample_data/cloud, write_path=../sample_data/result
+
+#k8spspforbiddensysctls
+#Controls the `sysctl` profile used by containers. Corresponds to the
+#`allowedUnsafeSysctls` and `forbiddenSysctls` fields in a PodSecurityPolicy.
+#When specified, any sysctl not in the `allowedSysctls` parameter is considered to be forbidden.
+#The `forbiddenSysctls` parameter takes precedence over the `allowedSysctls` parameter.
+# For more information, see https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/
+##
+#allowedSysctls = ["net.core.somaxconn"]
+#forbiddenSysctls = ["kernel.msgmax"]
+
+read read_path/pod_config.json as pod_config
+create [violate_name] as r
+select
+    ["net.core.somaxconn"] as allowedSysctls;
+    ["kernel.msgmax"] as forbiddenSysctls;
+    pod_config[_] as object;
+
+    object["metadata"]["name"] as name;
+    object["spec"]["securityContext"]["sysctls"][_]["name"] as sysctl_name;
+    name+":"+sysctl_name as violate_name;
+
+where object["kind"] == "Pod";  sysctl_name in forbiddenSysctls or sysctl_name not in allowedSysctls
+
+write write_path/pod_forbiddenSysctls.json from r
+
+#######################
+#k8spspcapabilities
+#Controls Linux capabilities on containers. Corresponds to the
+#    `allowedCapabilities` and `requiredDropCapabilities` fields in a
+#     PodSecurityPolicy.
+# https://kubernetes.io/docs/concepts/policy/pod-security-policy/#capabilities
+##
+#allowed = ["something"]
+#must_drop = ["must_drop", "another_one"]
+
+read read_path/pod_config.json as pod_config
+create [violate_name] as r
+var i select
+   ["something"] as allowed;
+   ["must_drop", "another_one"] as must_drop;
+    pod_config[_] as object;
+
+    object["spec"][i][_] as container;
+    object["metadata"]["name"] as name;
+    container["name"] as container_name;
+    name+":"+container_name as violate_name;
+
+where i in ["containers", "initContainers", "ephemeralContainers"];
+    container["securityContext"]["capabilities"]["add"][_] not in allowed or
+    must_drop and not(must_drop[_] in container["securityContext"]["capabilities"]["drop"])
+
+write write_path/pod_capabilities.json from r
+#######################
+#k8spspapparmor

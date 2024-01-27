@@ -1,0 +1,170 @@
+[
+    {
+        "apiVersion": "v1",
+        "kind": "Pod",
+        "metadata": {
+            "name": "nginx-forbidden-sysctls-disallowed",
+            "labels": {
+                "app": "nginx-forbidden-sysctls"
+            }
+        },
+        "spec": {
+            "containers": [
+                {
+                    "name": "nginx",
+                    "image": "nginx"
+                }
+            ],
+            "securityContext": {
+                "sysctls": [
+                    {
+                        "name": "net.core.somaxconn",
+                        "value": "1024"
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "apiVersion": "v1",
+        "kind": "Pod",
+        "metadata": {
+            "name": "nginx-forbidden-sysctls-disallowed",
+            "labels": {
+                "app": "nginx-forbidden-sysctls"
+            }
+        },
+        "spec": {
+            "containers": [
+                {
+                    "name": "nginx",
+                    "image": "nginx"
+                }
+            ],
+            "securityContext": {
+                "sysctls": [
+                    {
+                        "name": "kernel.msgmax",
+                        "value": "65536"
+                    },
+                    {
+                        "name": "net.core.somaxconn",
+                        "value": "1024"
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "apiVersion": "v1",
+        "kind": "Pod",
+        "metadata": {
+            "name": "containers_capabilities-allowed",
+            "labels": {
+                "owner": "me.agilebank.demo"
+            }
+        },
+        "spec": {
+            "containers": [
+                {
+                    "name": "opa",
+                    "image": "openpolicyagent/opa:0.9.2",
+                    "args": [
+                        "run",
+                        "--server",
+                        "--addr=localhost:8080"
+                    ],
+                    "securityContext": {
+                        "capabilities": {
+                            "add": [
+                                "something"
+                            ],
+                            "drop": [
+                                "must_drop",
+                                "another_one"
+                            ]
+                        }
+                    },
+                    "resources": {
+                        "limits": {
+                            "cpu": "100m",
+                            "memory": "30Mi"
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "apiVersion": "v1",
+        "kind": "Pod",
+        "metadata": {
+            "name": "ephemeralContainers_capabilities-disallowed",
+            "labels": {
+                "owner": "me.agilebank.demo"
+            }
+        },
+        "spec": {
+            "ephemeralContainers": [
+                {
+                    "name": "opa",
+                    "image": "openpolicyagent/opa:0.9.2",
+                    "args": [
+                        "run",
+                        "--server",
+                        "--addr=localhost:8080"
+                    ],
+                    "securityContext": {
+                        "capabilities": {
+                            "add": [
+                                "disallowedcapability"
+                            ]
+                        }
+                    },
+                    "resources": {
+                        "limits": {
+                            "cpu": "100m",
+                            "memory": "30Mi"
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "apiVersion": "v1",
+        "kind": "Pod",
+        "metadata": {
+            "name": "containers_capabilities-disallowed",
+            "labels": {
+                "owner": "me.agilebank.demo"
+            }
+        },
+        "spec": {
+            "containers": [
+                {
+                    "name": "opa",
+                    "image": "openpolicyagent/opa:0.9.2",
+                    "args": [
+                        "run",
+                        "--server",
+                        "--addr=localhost:8080"
+                    ],
+                    "securityContext": {
+                        "capabilities": {
+                            "add": [
+                                "disallowedcapability"
+                            ]
+                        }
+                    },
+                    "resources": {
+                        "limits": {
+                            "cpu": "100m",
+                            "memory": "30Mi"
+                        }
+                    }
+                }
+            ]
+        }
+    }
+]

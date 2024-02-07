@@ -150,9 +150,9 @@ class CreateResultParser:
 				self.advance()
 			elif self.current_tok.type == 'EXPR':
 				if self.current_tok.value in self.var_agg_map.keys():
-					tmp_string += f"""eval(r_tuple['{self.current_tok.value}'])"""
+					tmp_string += f"""eval(_kiwi_r_tuple['{self.current_tok.value}'])"""
 				else:
-					tmp_string += f"""r_tuple['{self.current_tok.value}']"""
+					tmp_string += f"""_kiwi_r_tuple['{self.current_tok.value}']"""
 				self.advance()
 			else:
 				tmp_string += self.current_tok.value
@@ -163,9 +163,9 @@ class CreateResultParser:
 				self.advance()
 				if self.current_tok.type == 'EXPR':
 					if self.current_tok.value in self.var_agg_map.keys():
-						tmp_string += f"""eval(r_tuple['{self.current_tok.value}'])"""
+						tmp_string += f"""eval(_kiwi_r_tuple['{self.current_tok.value}'])"""
 					else:
-						tmp_string += f"""r_tuple['{self.current_tok.value}']"""
+						tmp_string += f"""_kiwi_r_tuple['{self.current_tok.value}']"""
 				self.advance()
 
 		return  tmp_string
@@ -181,10 +181,10 @@ class CreateResultParser:
 
 		elif self.current_tok.type == 'EXPR':
 			if self.current_tok.value in self.var_agg_map.keys():
-				r_tail += offset + f"""_{head} = eval(r_tuple['{self.current_tok.value}'])\n"""
+				r_tail += offset + f"""_{head} = eval(_kiwi_r_tuple['{self.current_tok.value}'])\n"""
 				r_tail += offset + f"""if _{head}: {head}.append(_{head})"""
 			else:
-				r_tail += offset + f"""_{head} = r_tuple['{self.current_tok.value}']\n"""
+				r_tail += offset + f"""_{head} = _kiwi_r_tuple['{self.current_tok.value}']\n"""
 				r_tail += offset + f"""if _{head}:  {head}.append(_{head})"""
 			self.advance()
 		return r_tail
@@ -196,9 +196,9 @@ class CreateResultParser:
 			tmp_values["key"]=self.current_tok.value
 		elif self.current_tok.type == 'EXPR':
 			if self.current_tok.value in self.var_agg_map.keys():
-				tmp_values["key"]=f"""eval(r_tuple['{self.current_tok.value}'])"""
+				tmp_values["key"]=f"""eval(_kiwi_r_tuple['{self.current_tok.value}'])"""
 			else:
-				tmp_values["key"]=f"""r_tuple['{self.current_tok.value}']"""
+				tmp_values["key"]=f"""_kiwi_r_tuple['{self.current_tok.value}']"""
 
 		self.advance()
 		r_tail = ''
@@ -206,9 +206,9 @@ class CreateResultParser:
 			self.advance()
 			if self.current_tok.type == 'EXPR':
 				if self.current_tok.value in self.var_agg_map.keys():
-					val = f"""eval(r_tuple['{self.current_tok.value}'])"""
+					val = f"""eval(_kiwi_r_tuple['{self.current_tok.value}'])"""
 				else:
-					val =  f"""r_tuple['{self.current_tok.value}']"""
+					val =  f"""_kiwi_r_tuple['{self.current_tok.value}']"""
 				tmp_values["val"] = val
 				self.advance()
 				r_tail+=f"""{head}[{tmp_values["key"]}]={tmp_values["val"]}"""
@@ -233,13 +233,13 @@ class CreateResultParser:
 
 	def preparse(self):
 		r_head ="init_util()\n"
-		r_head += 'default_group_by="default_group_by"\n'
+		r_head += '_kiwi_default_group_by="_kiwi_default_group_by"\n'
 		for _k in self.var_agg_map.keys():
 			if self.var_agg_map[_k]["op"] in ['collect list', 'collect set', 'count distinct', 'sum', 'min', 'max']:
 				tmp = '{}'
 				r_head += f"""{_k} = {tmp}\n"""
-				r_head += f"""_{_k}_check = []\n"""
-				r_head += f"""_{_k}_flag = True\n"""
+				r_head += f"""_{_k}_kiwi_check = []\n"""
+				r_head += f"""_{_k}_kiwi_flag = True\n"""
 			if self.var_agg_map[_k]["op"] == 'count distinct':
 				tmp = '{}'
 				r_head += f"""{_k}_ = {tmp}\n"""
@@ -292,24 +292,24 @@ class CreateResultParser:
 					order_t = order_t[:-len('asc')].strip()
 
 				if order_t in self.var_agg_map.keys():
-					r_tail += f"""result_tuple['{self.result_var}'] = sorted(result_tuple['{self.result_var}'], key=lambda l: eval(l['{order_t}']), reverse={reversed})[:{limit_v}]\n"""
+					r_tail += f"""_kiwi_result_tuple['{self.result_var}'] = sorted(_kiwi_result_tuple['{self.result_var}'], key=lambda l: eval(l['{order_t}']), reverse={reversed})[:{limit_v}]\n"""
 				else:
-					r_tail += f"""result_tuple['{self.result_var}'] = sorted(result_tuple['{self.result_var}'], key=lambda l: l['{order_t}'], reverse={reversed})[:{limit_v}]\n"""
+					r_tail += f"""_kiwi_result_tuple['{self.result_var}'] = sorted(_kiwi_result_tuple['{self.result_var}'], key=lambda l: l['{order_t}'], reverse={reversed})[:{limit_v}]\n"""
 
 		if self.current_tok.type == 'STR' or self.current_tok.type == 'EXPR':
 			tmp_expr = self.current_tok.value
 			if tmp_expr in self.var_agg_map.keys():
-				r_tail += f"""if result_tuple['{self.result_var}']: \n"""
-				r_tail += f"""    {self.result_var} = eval(result_tuple['{self.result_var}'][0]['{tmp_expr}']) \n"""
+				r_tail += f"""if _kiwi_result_tuple['{self.result_var}']: \n"""
+				r_tail += f"""    {self.result_var} = eval(_kiwi_result_tuple['{self.result_var}'][0]['{tmp_expr}']) \n"""
 				r_tail += f"""else: \n"""
 				r_tail += f"""    {self.result_var} = [] \n"""
 			else:
-				r_tail += f"""if result_tuple['{self.result_var}']: \n"""
-				r_tail += f"""    {self.result_var} = result_tuple['{self.result_var}'][0]['{tmp_expr}'] \n"""
+				r_tail += f"""if _kiwi_result_tuple['{self.result_var}']: \n"""
+				r_tail += f"""    {self.result_var} = _kiwi_result_tuple['{self.result_var}'][0]['{tmp_expr}'] \n"""
 				r_tail += f"""else: \n"""
 				r_tail += f"""    {self.result_var} = [] \n"""
 		else:
-			r_tail += f"""for r_tuple in result_tuple['{self.result_var}']:\n"""
+			r_tail += f"""for _kiwi_r_tuple in _kiwi_result_tuple['{self.result_var}']:\n"""
 			if self.current_tok.value == '{':
 				tmp = '{}'
 				r_head += f"""{self.result_var} = {tmp}\n"""
@@ -641,7 +641,7 @@ class CreateBodyParser:
 
 				else:
 					self.var_agg_map[assign_value] = {'op':agg_op, 
-									   'group_by': 'default_group_by',
+									   'group_by': '_kiwi_default_group_by',
 									   'agg_op': 'aggregate'}
 					group_by_var = self.group_by_var
 				assign_ex = strip_operator(assign_ex.strip(), s)
@@ -693,9 +693,9 @@ class CreateBodyParser:
 		for _i in self.var_agg_map.keys():
 			group_by = ','.join(list(self.group_by_var))
 			if self.var_agg_map[_i]['group_by'] == '(NONE)' or group_by == '':
-				group_by = 'default_group_by'
+				group_by = '_kiwi_default_group_by'
 				self.var_agg_map[_i]['group_by'] = '('+group_by+')'			
-			elif self.var_agg_map[_i]['group_by'] == 'default_group_by':
+			elif self.var_agg_map[_i]['group_by'] == '_kiwi_default_group_by':
 				self.var_agg_map[_i]['group_by'] = '('+group_by+')'
 
 		self.negate_sub_logic = []
@@ -762,9 +762,9 @@ class CreateBodyParser:
 	def gen_clause(self):
 		tmp_var_loop_set = set()
 		self.r_tuple = {}
-		self.for_loop_list = [(0, """result_tuple = {}""")]
+		self.for_loop_list = [(0, """_kiwi_result_tuple = {}""")]
 		for r, v_list in self.result_value_list.items():
-			self.for_loop_list.append((0, f"""result_tuple['{r}'] = []"""))
+			self.for_loop_list.append((0, f"""_kiwi_result_tuple['{r}'] = []"""))
 		curr_assign_list = list(range(len(self.assign_list)))
 		curr_cond_list = list(range(len(self.where_list)))
 		offset = 0
@@ -826,11 +826,11 @@ class CreateBodyParser:
 
 				check_var = '('+','.join(group_by_var_list + list(loop_depend_var))+')'
 
-				self.for_loop_list.append((offset, f"""if {check_var} in _{g_var}_check:"""))
-				self.for_loop_list.append((offset+4, f"""_{g_var}_flag = False"""))
+				self.for_loop_list.append((offset, f"""if {check_var} in _{g_var}_kiwi_check:"""))
+				self.for_loop_list.append((offset+4, f"""_{g_var}_kiwi_flag = False"""))
 				self.for_loop_list.append((offset, f"""else:"""))
-				self.for_loop_list.append((offset+4, f"""_{g_var}_check.append({check_var})"""))
-				self.for_loop_list.append((offset+4, f"""_{g_var}_flag = True"""))
+				self.for_loop_list.append((offset+4, f"""_{g_var}_kiwi_check.append({check_var})"""))
+				self.for_loop_list.append((offset+4, f"""_{g_var}_kiwi_flag = True"""))
 
 
 		def _put_assignment_clause(curr_assign_list, curr_cond_list, offset):
@@ -888,9 +888,9 @@ class CreateBodyParser:
 					if tmp_collect:
 						def put_collect_aggregate():
 							if vu_if:
-								self.for_loop_list.append((offset, f"""if _{va}_flag == True and {vu_if}:"""))
+								self.for_loop_list.append((offset, f"""if _{va}_kiwi_flag == True and {vu_if}:"""))
 							else:
-								self.for_loop_list.append((offset, f"""if _{va}_flag == True:"""))
+								self.for_loop_list.append((offset, f"""if _{va}_kiwi_flag == True:"""))
 							_add_collect_to_for_loop_list(va, vu.split('|'), offset+4)
 							group_by = self.var_agg_map[va]['group_by']
 							self.for_loop_list.append((offset, f"""{va}_group_by_str=str({group_by})"""))
@@ -907,9 +907,9 @@ class CreateBodyParser:
 
 						def put_collect_extend():
 							if vu_if:
-								self.for_loop_list.append((offset, f"""if _{va}_flag == True and {vu_if}:"""))
+								self.for_loop_list.append((offset, f"""if _{va}_kiwi_flag == True and {vu_if}:"""))
 							else:
-								self.for_loop_list.append((offset, f"""if _{va}_flag == True:"""))
+								self.for_loop_list.append((offset, f"""if _{va}_kiwi_flag == True:"""))
 							_add_extend_to_for_loop_list(va, vu, offset+4)
 							group_by = self.var_agg_map[va]['group_by']
 							self.for_loop_list.append((offset, f"""{va}_group_by_str=str({group_by})"""))
@@ -1001,8 +1001,8 @@ class CreateBodyParser:
 					curr_assign_list, curr_cond_list, offset = _put_assignment_clause(curr_assign_list, curr_cond_list, offset)
 		for r, v in self.r_tuple.items():
 			self.r_tuple[r] = self.r_tuple[r].strip(',')
-			self.for_loop_list.append((offset, 'if {'+self.r_tuple[r]+'} not in' + f" result_tuple['{r}']:"))
-			self.for_loop_list.append((offset+4, f"result_tuple['{r}']"+'.append({'+self.r_tuple[r]+'})'))
+			self.for_loop_list.append((offset, 'if {'+self.r_tuple[r]+'} not in' + f" _kiwi_result_tuple['{r}']:"))
+			self.for_loop_list.append((offset+4, f"_kiwi_result_tuple['{r}']"+'.append({'+self.r_tuple[r]+'})'))
 		print("self.for_loop_list:", self.for_loop_list)
 
 		return self.for_loop_list

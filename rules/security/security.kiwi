@@ -50,5 +50,5 @@ var i, j select
     flows[j]["id.orig_h"] AS s_ip_2;
     flows[j]["id.resp_h"] AS d_ip_2;
     collect set ((s_ip_1, d_ip_1)) where d_ip_1 == s_ip_2 extend by (s_ip_2, d_ip_2) as path_recording;
-where flows[i]["id.resp_p"] == 445; flows[j]["id.resp_p"] == 445
+where flows[i]["id.resp_p"] in [445, 137, 138,139]; flows[j]["id.resp_p"] in [445, 137, 138,139]
 WRITE write_path/path_recording.json FROM result

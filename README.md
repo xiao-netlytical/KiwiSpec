@@ -42,16 +42,16 @@ The first example uses conn.log from Zeek to generate a list of the top 5 DNS in
 
 In this example, path traces of the SMB connections are collected.
 
-READ read_path/conn.json AS flows; write_path/ip_to_servers.json AS srv
-create   [path_recording] as result
-var i, j select
-    flows[i]["id.orig_h"] AS s_ip_1;
-    flows[i]["id.resp_h"] AS d_ip_1;
-    flows[j]["id.orig_h"] AS s_ip_2;
-    flows[j]["id.resp_h"] AS d_ip_2;
-    collect set ((s_ip_1, d_ip_1)) where d_ip_1 == s_ip_2 extend by (s_ip_2, d_ip_2) as path_recording;
-where flows[i]["id.resp_p"] == 445; flows[j]["id.resp_p"] == 445
-WRITE write_path/path_recording.json FROM result
+    READ read_path/conn.json AS flows; write_path/ip_to_servers.json AS srv
+    create   [path_recording] as result
+    var i, j select
+        flows[i]["id.orig_h"] AS s_ip_1;
+        flows[i]["id.resp_h"] AS d_ip_1;
+        flows[j]["id.orig_h"] AS s_ip_2;
+        flows[j]["id.resp_h"] AS d_ip_2;
+        collect set ((s_ip_1, d_ip_1)) where d_ip_1 == s_ip_2 extend by (s_ip_2, d_ip_2) as path_recording;
+    where flows[i]["id.resp_p"] == 445; flows[j]["id.resp_p"] == 445
+    WRITE write_path/path_recording.json FROM result
 
 For more details on KiwiSpec, please refer to the Kiwilang directory. 
 
@@ -74,11 +74,11 @@ Within the rules/application directory, a set of KiwiSpecs can be employed to di
 
 In the rules/asset directory, a set of KiwiSpecs is defined for discovering assets, applications, and services, as well as aggregating the assets and connections. These KiwiSpecs explore relationships and dependencies using various classification mechanisms. A subset of KiwiSpecs demonstrates how to create traffic permission policies based on the discovered activities and groups.
 
-### 2.3
+### 2.3 Security Rules
 
 Under the rules/security directory, a set of KiwiSpecs demonstrates how to find top talkers, longest connections, per-interval statistics, and trace paths. Another set of specifications is defined to validate best practices and security policies for cloud deployments.
 
-## 4. To try KiwiSpec with the rules and a sample Zeek log
+## 3. To try KiwiSpec with the rules and a sample Zeek log
    
            git clone https://github.com/xiao-netlytical/kiwi.git 
            cd kiwi

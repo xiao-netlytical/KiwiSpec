@@ -27,7 +27,19 @@ Key features of the KiwiSpec language include:
 
 The key building blocks of the language are identifiers, expressions, and relationship operators. The following examples provide a quick preview of the language.
 
-The first example uses conn.log from Zeek to generate a list of the top 5 DNS initiators in every 5 minutes interval.
+The first example uses conn.log from Zeek to generate a map between an IP address to the provided services.
+
+    READ conn_path/conn.json as flows; application_path/proto_desciption.json as proto_desciption
+    CREATE {ip:apps} as result
+    var i, k select 
+        flows[i]["id.resp_h"] as ip;
+        flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"]) as port;
+        collect set(port+":"+proto_desciption[port]) group by ip as apps;
+    where port not in ["TCP_443", "TCP_80"];
+          flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"] and not flows[i]["proto"].startswith("icmp")
+    write write_path/ip_to_servers.json from result
+    
+This example uses conn.log from Zeek to generate a list of the top 5 DNS initiators in every 5 minutes interval.
 
     READ conn.json AS flows
     CREATE {window_start: [{dns_src: dns_requests} LIMITED 10]}  AS result
@@ -40,7 +52,7 @@ The first example uses conn.log from Zeek to generate a list of the top 5 DNS in
         ORDER BY dns_requests DESC
     WRITE top_dns_sender.json FROM result
 
-In this example, path traces of the SMB connections are collected.
+In this example, SMB calling paths are collected.
 
     READ read_path/conn.json AS flows; write_path/ip_to_servers.json AS srv
     create   [path_recording] as result

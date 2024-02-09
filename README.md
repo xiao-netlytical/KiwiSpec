@@ -1,5 +1,5 @@
 # KiwiSpec
-KiwiSpec (Knowledge Interpreter With Intelligence) is a declarative language developed for documenting data processing as specifying relationships and transformations on JSON-formatted dataset.
+KiwiSpec (Knowledge Interpreter With Intelligence) is a declarative language developed for documenting data processing by specifying relationships, constraints, and transformations as code on JSON-formatted datasets
 
 The language is tailored for data access, manipulation, information extraction, and constraint validation using JSON-formatted datasets. KiwiSpec is designed with the goal of being close to natural language and easy to adopt, read, understand, and maintain. As a declarative language, KiwiSpec borrows the basic language structure from SQL while extending the capabilities to access and query JSON data fields. A query to a JSON field is defined as an expression with identifiers representing all valid instances within the dataset.
 

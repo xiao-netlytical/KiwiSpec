@@ -6,7 +6,7 @@ write_path=../sample_data/result
 #########################################
 #DNS request for each source address in a five minute window ordered by request count
 read read_path/conn.json as flows
-create {window_start: [{dns_src: dns_requests}]}  as r
+create {window_start: [{dns_src: dns_requests} LIMITED 10]}  as r
 var i  select
     flows[i]["id.orig_h"] as dns_src;
     int(epoch_time(flows[i]["ts"])/300) as window_start;

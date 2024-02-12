@@ -251,6 +251,7 @@ def execute_logic(con_string, con_var_dep, value_str='', negate_sub_logic={}):
     
     if con_string.lower().startswith('not'):
         r = True
+        con_string = 'not'+con_string[len('not'):]
         for _i in get_ex_keys(t_ex):
             r = r and execute_logic(con_string, con_var_dep, 
                                     value_str+f'{vr} = "{_i}";' if isinstance(_i, str) else value_str+f'{vr} = {_i};', 

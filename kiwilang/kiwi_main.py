@@ -170,22 +170,41 @@ class CreateResultParser:
 
 		return  tmp_string
 
-
+	def get_limit(self):
+		cur_tidx = self.tok_idx
+		limit = -1
+		while cur_tidx < len(self.tokens) and self.tokens[cur_tidx].value != ']':
+			if self.tokens[cur_tidx].value.lower() == 'limited':
+				limit = self.tokens[cur_tidx+1].value
+			cur_tidx +=1
+		return int(limit)
+	
 	def parse_result_list(self, head, offset=''):
 		r_tail = ''
 		self.advance()
+		limit = self.get_limit()
+
 		if self.current_tok.value == '{':
 			tmp_string = self.parse_disc(head, r_tail)
 			tmp_string = '{' + tmp_string + '}'
-			r_tail += offset + f"""{head}.append({tmp_string})\n"""
+			if limit > 0:
+				r_tail += offset + f"""if len({head}) < {limit}: {head}.append({tmp_string})\n"""
+			else:
+				r_tail += offset + f"""{head}.append({tmp_string})\n"""
 
 		elif self.current_tok.type == 'EXPR':
 			if self.current_tok.value in self.var_agg_map.keys():
 				r_tail += offset + f"""_{head} = eval(_kiwi_r_tuple['{self.current_tok.value}'])\n"""
-				r_tail += offset + f"""if _{head}: {head}.append(_{head})"""
+				if limit > 0:
+					r_tail += offset + f"""if _{head} and len({head}) < {limit}:{head}.append(_{head})"""
+				else:
+					r_tail += offset + f"""if _{head}: {head}.append(_{head})"""
 			else:
 				r_tail += offset + f"""_{head} = _kiwi_r_tuple['{self.current_tok.value}']\n"""
-				r_tail += offset + f"""if _{head}:  {head}.append(_{head})"""
+				if limit > 0:
+					r_tail += offset + f"""if _{head} and len({head}) < {limit}:{head}.append(_{head})"""
+				else:
+					r_tail += offset + f"""if _{head}: {head}.append(_{head})"""
 			self.advance()
 		return r_tail
 
@@ -1498,3 +1517,4 @@ def main():
 
 if __name__=="__main__":
     main()
+

@@ -1,15 +1,15 @@
 # KiwiSpec
-KiwiSpec (Knowledge Interpreter With Intelligence) is a declarative language developed for documenting data processing by specifying relationships, constraints, and transformations as code on JSON-formatted datasets
+KiwiSpec (Knowledge Interpreter With Intelligence) is a declarative language developed for data processing by specifying relationships, constraints, and transformations as code on JSON-formatted datasets
 
-The language is tailored for data access, manipulation, information extraction, and constraint validation using JSON-formatted datasets. KiwiSpec is designed with the goal of being close to natural language and easy to adopt, read, understand, and maintain. As a declarative language, KiwiSpec borrows the basic language structure from SQL while extending the capabilities to access and query JSON data fields. A query to a JSON field is defined as an expression with identifiers representing all valid instances within the dataset.
+The language is tailored for data access, manipulation, information extraction, and constraint validation on JSON-formatted datasets. KiwiSpec is designed with the goal of being close to natural language and easy to adopt, read, understand, and maintain. As a declarative language, KiwiSpec borrows the basic language structure from SQL while extending the capabilities to access and query JSON-formatted datasets. A query to a JSON field is defined as an expression with identifiers representing all the valid instances within a dataset.
 
-Built upon expressions, programming data aggregation, transformation, and validation is streamlined to define the desired format and required relationships of expressions. In KiwiSpec, a tracing path can be specified with a root expression and extensions with conditions. The correlation of data fields from multiple sources is simplified through layered expressions.
+Built upon expressions, programming data aggregation, transformation, and validation is streamlined to define the desired format and required relationships of expressions. In KiwiSpec, a tracing path can be specified with a root expression and extension expressions with constrains. The correlation of data fields from multiple data sources is simplified through layered expressions.
 
-To capture comprehensive logic for integrating multiple independently held constraints, composite logic expressions are introduced. With composite expressions, each constraint is independently evaluated using the entire dataset, and the final result of a composite logic is the integration of the individual outcomes. Composite logic expressions consist of 'and/or' operations of the individual constraints, each of which is enclosed within parentheses and preceded by the leading word 'unit'.
+To capture comprehensive logic for integrating multiple independently held constraints, composite logic expressions are introduced. With composite expressions, each constraint is independently evaluated using the specified dataset, and the final result of a composite logic is the integration of the individual outcomes. Composite logic expressions consist of 'and/or' operations of the individual constraints, each of which is enclosed within parentheses and preceded by the leading word 'unit'.
 
-KiwiSpec is an extension of the Python language, inheriting many Python operations such as string operations, lists and sets operations and logical expressions.
+KiwiSpec is an extension of the Python language, inheriting many Python operations such as string operations, list and set operations and logical expressions.
 
-Key features of the KiwiSpec language include:
+Key features of the KiwiSpec include:
 
     - Expressions with variables for accessing JSON fields
     - Data aggregation with group by and condition
@@ -23,7 +23,7 @@ Key features of the KiwiSpec language include:
 
 ## 1. KiwiSpec and Interpreter
 
-The key building blocks of the language are identifiers, expressions, and relationship operators. The following examples provide a quick preview of the language.
+The key building blocks of the language are identifiers, expressions, and relationship operators. The following examples provide a quick preview of the language. The kiwiSpec interpreter can execute the following specs and write the result to the specified files.
 
 The first example uses conn.log from Zeek to generate a map between an IP address to the provided services.
 
@@ -37,7 +37,7 @@ The first example uses conn.log from Zeek to generate a map between an IP addres
           flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"] and not flows[i]["proto"].startswith("icmp")
     write write_path/ip_to_servers.json from result
     
-In this example, connections are aggregated to each source and destination application pair
+In the following example, connections are aggregated to an source application and destination application pair.
 
     READ write_path/ip_to_servers.json AS srv; conn_path/conn.json AS flows
     CREATE [{"s_srv":s_srv, "d_srv":d_srv, "o_pkts":o_pkts, "r_pkts":r_pkts, "protos": protos}] AS result
@@ -50,7 +50,7 @@ In this example, connections are aggregated to each source and destination appli
     where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"]
     WRITE write_path/server_to_server_traffic.json FROM result
 
-This example uses conn.log from Zeek to generate a list of the top 5 DNS initiators in every 5 minutes interval.
+The following example uses conn.log from Zeek to generate a list of the top 5 DNS initiators in every 5 minutes interval.
 
     READ conn_path/conn.json AS flows
     CREATE {window_start: [{dns_src: dns_requests} LIMITED 10]}  AS result
@@ -58,7 +58,7 @@ This example uses conn.log from Zeek to generate a list of the top 5 DNS initiat
     SELECT
         flows[i]["id.orig_h"] AS dns_src;
         int(epoch_time(flows[i]["ts"])/300) AS window_start;
-        SUM(count_one(i)) GROUP BY dns_src,window_start AS dns_requests;
+        COUNT DISTINCT(i) GROUP BY dns_src,window_start AS dns_requests;
         WHERE flows[i]["id.resp_p"] == 53;
         ORDER BY dns_requests DESC
     WRITE write_path/top_dns_sender.json FROM result
@@ -86,19 +86,20 @@ For additional examples, please see the files under the rules directories.
 
 ## 2. Rules in KiwiSpec:
 
-KiwiSpec can be utilized in cybersecurity applications to specify asset discovery, threat hunting searches, and validation of security policies. The use cases include leveraging logs and configurations to explore IT/OT/Cloud environments, as well as to validate configurations, deployments, and activities for adherence to best practices and security policies.
+KiwiSpec is employed in cybersecurity applications for Cyber Asset Attack Surface Management, threat hunting, and enforcing security policies.
 
-The four sets of KiwiSpec applications are organized under /rules subdirectories:
+Use cases encompass utilizing logs and configurations to explore IT/OT/Cloud environments, establishing baselines, identifying outliers, and validating configurations, deployments, and activities.
+There are four sets of KiwiSpec rules organized under /rules subdirectories:
 
 ### 2.1 Application Discovery
 
-Within the rules/application directory, a set of KiwiSpecs can be employed to discover servers in an environment from Zeek connection logs. Application servers are classified using composite logic to specify a list of required protocols to define a server.
+Within the rules/application directory, a set of KiwiSpecs can be employed to discover servers from Zeek connection logs. Application servers are classified by using composite logic to define the required protocols for a server.
 
-### 2.2 Asset Discovery
+### 2.2 Learning the Environment
 
-In the rules/asset directory, a set of KiwiSpecs is defined for discovering assets, applications, and services, as well as aggregating the assets and connections. These KiwiSpecs explore relationships and dependencies using various classification mechanisms. A subset of KiwiSpecs demonstrates how to create traffic permission policies based on the discovered activities and groups.
+In the rules/asset directory, a set of KiwiSpecs is defined for discovering assets, applications, and services, as well as aggregating the assets and connections in different criteriaes. These KiwiSpecs explore the relationships and dependencies using various classification mechanisms. A subset of KiwiSpecs demonstrates how to create traffic permission policies based on the discovered activities and groups.
 
-### 2.3 Security Rules
+### 2.3 Baseline and Outlier
 
 Under the rules/security directory, a set of KiwiSpecs demonstrates how to find top talkers, longest connections, per-interval statistics, and connection tracing paths. 
 
@@ -115,7 +116,6 @@ Another set of specifications is defined to validate best practices and security
            python3 kiwi_main.py ../rules/asset/explore.kiwi
            python3 kiwi_main.py ../rules/asset/explore_service.kiwi
            python3 kiwi_main.py ../rules/security/security.kiwi
-           python3 kiwi_main.py ../rules/security/threat_hunt.kiwi
            python3 kiwi_main.py ../rules/security/cloud_policy.kiwi
 
 

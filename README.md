@@ -108,7 +108,7 @@ Another set of specifications is defined to validate best practices and security
 ## 3. To try KiwiSpec with the rules and a sample Zeek log
    
            git clone https://github.com/xiao-netlytical/kiwi.git 
-           cd kiwi
+           cd KiwiSpec
            mkdir sample_data/result 
            cd kiwilang
            python3 kiwi_main.py ../rules/application/application.kiwi

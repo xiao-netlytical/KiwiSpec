@@ -6,14 +6,22 @@ from kiwi_util import *
 from kiwi_update import *
 from kiwi_create import *
 from kiwi_select import *
+from kiwi_lexer import *
 
 def FromPaser(fn, text):
 	text = strip_prefix(text, ['read'])
 	l = list_strip(text.split(";"))
 	r = ''
 	for fl in l:
-		f, s = split(fl, ' as ')
-		r += f'{s} = read_json_file(f"{f}");'
+		try:
+			f, s = split(fl, ' as ')
+			r += f'{s} = read_json_file(f"{f}");'
+		except BaseException as e:
+			print('The right format for READ is:')
+			print('READ file AS v1; file_path/file1 AS v2; d1/d2/file3 AS v3; ...\n')
+			print('you may miss ";" or " as "\n')
+			raise
+
 	return r
 
 def ToPaser(fn, text):
@@ -21,10 +29,17 @@ def ToPaser(fn, text):
 	text_list = text.split(';')
 	r = ''
 	for text_t in text_list:
-		f, d = split(text_t, ' from ')
-		f = f.strip()
-		d = d.strip()
-		r += f'\nwrite_json_file(f"{f}", {d});'
+		try:
+			f, d = split(text_t, ' from ')
+			f = f.strip()
+			d = d.strip()
+			r += f'\nwrite_json_file(f"{f}", {d});'
+		except BaseException as e:
+			print('The right format for WRITE is:')
+			print('WRITE file FROM r1; file_path/file1 FROM r2; d1/d2/file3 FROM r3; ...\n')
+			print('you may miss ";" or " FROM "\n')
+			raise
+
 	return r
 
 def DrawPaser(fn, text):
@@ -54,8 +69,14 @@ def CreatePaser(fn, text):
 			create_text = q[len('create '):]
 			tmp_create_list = create_text.split(';')
 			for c in tmp_create_list:
-				create_text, result_var = list_strip(split(c, ' as '))
-				create_list[result_var] = create_text
+				try:
+					create_text, result_var = list_strip(split(c, ' as '))
+					create_list[result_var] = create_text
+				except BaseException as e:
+					print('The right format for CREATE is:')
+					print('CREATE target_template AS r1; target_template AS r2; ... \n')
+					print('you may miss ";" or " as "\n')
+					raise
 		if q.lower().startswith('select'):
 			body_text = q
 		if q.lower().startswith('var'):
@@ -138,18 +159,25 @@ def UpdatePaser(fn, text):
 	return r_code,result_var
 
 def QueryParser(fn, text):
-	boundary = ['create', 'with', 'read', 'write', 'update', 'draw']
+	boundary = [ 'define', 'with', 'read', 'create', 'update',  'write',  'draw']
 	query_list = parser_get_query_list(text, boundary)
 
 	result_list = []
 	unit_v = ''
 	for q in query_list:
-		print(q, '\n')
+		print('\n',q,'\n')
+		if q.lower().strip().startswith('define'):
+			q = q.strip()[len('define'):]
+			_pass_define(q)
 		if q.lower().startswith('read'):
+			for _k,_v in path_define.items():
+				q = q.replace(_k, _v)
 			result_list.append(FromPaser(fn, q))
 		if q.lower().startswith('with'):
 			continue
 		if q.lower().startswith('write'):
+			for _k,_v in path_define.items():
+				q = q.replace(_k, _v)
 			result_list.append(ToPaser(fn, q))
 		if q.lower().startswith('draw'):
 			result_list.append(DrawPaser(fn, q))
@@ -181,12 +209,28 @@ def cli():
 		else:
 			query += text
 
+
+path_define = {}
+def _pass_define(line):
+	define_list = list_strip(line.split(','))
+	for d in define_list:
+		if not d:
+			continue
+		try:
+			_k, _v = d.strip().split('=')
+		except BaseException as e:
+			print('The right format for DEFINE is:')
+			print('DEFINE v1=x1/x2/file1, v2=x1/x2/file2, ...\n')
+			print('you may miss "," or "="\n')
+			raise
+
+		path_define[_k.strip()] = _v.strip()
+
 def kiwi(text):
 	result, result_v = QueryParser(None, text)
 	result_r = execute_code(result, result_v)
 	if result_r:
 		return result_r
-
 
 import sys
 
@@ -198,21 +242,12 @@ def main():
 				return _i.lower()
 		return ''
 	
-	def _pass_define(line):
-		define_list = list_strip(line.split(','))
-		for d in define_list:
-			if not d:
-				continue
-			_k, _v = d.strip().split('=')
-			path_define[_k.strip()] = _v.strip()
-	
 	if len(sys.argv) < 2:
 		print("Please provide a filename as an argument")
 		sys.exit(1)
 
 	filename = sys.argv[1]
 
-	path_define = {}
 	try:
 		with open(filename, 'r') as file:
 			command_buffer = ''
@@ -279,5 +314,131 @@ def main():
 		sys.exit(1)
 
 
-if __name__=="__main__":
-    main()
+# if __name__=="__main__":
+    # main()
+
+
+kiwi(
+"""READ 
+../../KiwiSpec/sample_data/result/ip_to_servers.json AS srvs; 
+../../KiwiSpec/sample_data/result/server_to_ips.json AS ips;
+../../KiwiSpec/sample_data/zeek/conn.json AS flows
+
+CREATE {d_ip: ipg} as r
+VAR i SELECT
+	flows[i]["id.resp_h"] as d_ip;
+    collect set(ips[srvs[d_ip][_]]) AS ipg
+WRITE ip_groups.json FROM r
+"""
+)
+
+# kiwi(
+"""
+define conn_path=../sample_data/zeek, write_path=../sample_data/result
+
+READ config.json as object; conn_path/conn.json AS flows; 
+../sample_data/cloud/pod_config.json as pod_config
+
+
+create violate_rules as result
+VAR k SELECT
+	object["spec"][k] as spec_k;
+	collect eval("unit(spec_k_token == True) and unit(match1 == 'abc') and unit(not(match2 == 'abcd'))": 
+	spec_k_token = spec_k["automountServiceAccountToken"], 
+	match1=spec_k["containers"][i1]["volumeMounts"][j1]["mountPath"], 
+	match2=spec_k["initContainers"][i2]["volumeMounts"][j2]["mountPath"]) by i1,j1,i2,j2 as condition;
+	collect set(spec_k["automountServiceAccountToken"]) where condition group by NONE as violate_rules
+write logic_test_1.json from result
+
+create [violate_name] as r;
+var i select
+   ["something"] as allowed;
+   ["must_drop", "another_one"] as must_drop;
+    pod_config[_] as object;
+    object["spec"][i][_] as container;
+    object["metadata"]["name"] as name;
+    container["name"] as container_name;
+    name+":"+container_name as violate_name;
+where i in ["containers", "initContainers", "ephemeralContainers"];
+   not container["securityContext"]["capabilities"]["add"][_] in allowed or
+    must_drop and not(must_drop[_] in container["securityContext"]["capabilities"]["drop"]) 
+write logic_test.json from r
+
+"""
+# )
+
+"""
+define conn_path=../sample_data/zeek, write_path=../sample_data/result
+read write_path/ip_to_group.json as traffic
+create [tr] as traffic_list
+var i select
+    [traffic[i]["src"], traffic[i]["dst"]] as tr
+
+write write_path/traffic_list.json from traffic_list
+"""
+"""
+define read_path_flow=../sample_data/zeek/conn.json,
+read_dns_path = ../sample_data/zeek/dns.json, 
+write_path=../sample_data/result;
+
+read write_path/ip_to_servers.json as srv
+update srv 
+var ip set 
+    srv[ip] as list(set(srv[ip]) - {"WebServer"}); 
+    where srv[ip] != ["WebServer"]
+write write_path/clean_ip_to_servers.json from srv
+
+"""
+# kiwi(
+"""
+define read_path_flow=../sample_data/zeek/conn.json,
+read_dns_path = ../sample_data/zeek/dns.json, 
+write_path=../sample_data/result;
+
+read read_dns_path AS flows; 
+write_path/ip_to_servers.json as srv_names;
+
+create [t] as r
+var i  select 
+flows[i]["id.orig_h"] as ips;
+flows[i]["id.resp_h"] as ipd;
+srv_names[ips][_] as server_s;
+srv_names[ips][_] as server_d;
+[server_s, server_d] as t;
+where srv_names[ips] and srv_names[ipd]
+write dns_domain_requests.json FROM r
+
+"""
+# )
+"""
+
+create [{"src":s_ip, "base_domain":domain, "requests": ct, "srv":srv}] AS r
+var i  select 
+    flows[i]["id.orig_h"] as s_ip;
+    ".".join(flows[i]["query"].split(".")[-2:]) as domain;
+    count distinct(i) GROUP BY s_ip,domain AS ct;
+	srv_names[s_ip|" "] as srv;
+	order by ct DESC limit 1000;
+write write_path/dns_domain_requests.json FROM r
+
+
+create {s_ip: i} as r1
+var i  select 
+	i from range[100][i];
+	r[i]["src"] as s_ip;
+	where not srv_names[r[i]["src"]];
+ write write_path/dns_domain_requests_r1.json from r1  
+
+update var i set 
+	i from range[10][i];
+    r[i]["server"] as srv_names[r[i]["src"]|"none"];
+	r[i]["base_domain"] delete;
+	where r[i]["requests"] < 1000
+
+write write_path/dns_domain_requests.json from r
+
+update set 
+	r ORDER BY "requests":DESC
+
+write write_path/dns_domain_requests.json from r
+"""

@@ -2,6 +2,7 @@
 # This program translates code in KiwiSpec to python and executes the python code.
 
 from util import *
+from kiwi_lexer import *
 
 def get_logic_define(input_string):
 	import re
@@ -55,6 +56,13 @@ def startswith_list(s, l):
 def list_strip(l):
 	return [i.strip("' ', '\n', '\t'") for i in l]
 
+def find_leading_seperator(text, seperator, trailor, start):
+	for t in trailor:
+		next = text.lower().find(seperator+t, start)
+		if next != -1:
+			return next
+	return -1
+
 def find_boundary(text, boundary, follows, multi):
 	tmp_text = text.strip("' ', '\n', '\t'")[1:]
 	body_end = -1
@@ -62,10 +70,9 @@ def find_boundary(text, boundary, follows, multi):
 		repeat_b = True
 		start = 0
 		while repeat_b:
-			next = tmp_text.lower().find(b, start)
+			next = find_leading_seperator(tmp_text, b, [' ', '\n', '\t'], start)
 			if next != -1 and \
-				tmp_text[next-1] in [' ', '\n', '\t', ';'] and \
-				tmp_text[next+len(b)] in [' ', '\n', '\t', ';']:
+				tmp_text[next-1] in [' ', '\n', '\t', ';']:
 					if not follows or tmp_text[:next-1].strip("' ', '\n', '\t'")[-1] in follows:
 						if (body_end == -1 or next < body_end):
 							body_end = next
@@ -109,7 +116,7 @@ def check_access_map(access_map_list, check_str):
 		con_collect = con_collect[:-4] + ':'
 	return con_collect, tmp_access_map_list
 
-def get_access_maps(tokens, var_list, value_list, exclude_list=[]):
+def get_access_maps(token, var_list, value_list, exclude_list=[]):
 	all_depend = set()
 	var_depend = []
 	s_curr = ''
@@ -118,8 +125,7 @@ def get_access_maps(tokens, var_list, value_list, exclude_list=[]):
 	var_map = {}
 	access_map = []
 
-	for token in tokens:
-		i = token.value
+	for i in token.value:
 		if i == '[':
 			if s_curr:
 				s_stack.append((s_curr, var_flag))
@@ -170,89 +176,59 @@ def get_access_maps(tokens, var_list, value_list, exclude_list=[]):
 
 	return all_depend, var_depend, var_map, access_map
 
-def fix_default_format(assign_a):
-#a[x|y] a[b[x|y]] a[i][j][x|y] a[i|k][j][x|y] a[b[x|y]|z] a[b[x]|c[y]]
-#a[b[x]|c[y]] | a[b[x|y]|c[z]] | a[b[x]|c[y|z]]
-	lexer = BodyLexer(None, assign_a)
+def get_access_string(assign_a):
+
+	lexer = BodyLexer(None, assign_a.strip())
 	tokens = lexer.make_tokens()
 
 	s_curr = ''
 	s_stack = []
-	for token in tokens:
-		i = token.value
+	c_str = ''
+	for i in tokens[0].value:
 		if i == '[':
 			if s_curr:
 				s_stack.append(s_curr)
 			s_curr = i
 		elif i == ']':
 			s_curr += i
-			if '|' in s_curr:
-				x,y = s_curr[1:-1].split('|')
-				s_curr = f'.get({x}, {y})'
-
 			if s_stack:
 				pre_s = s_stack.pop()
 				s_curr = pre_s+s_curr
+				if not s_stack:
+					c_str = s_curr
 		else:
 			s_curr += i
-	return s_curr
 
-class Position:
-		def __init__(self, idx, ln, col, fn, ftxt):
-				self.idx = idx
-				self.ln = ln
-				self.col = col
-				self.fn = fn
-				self.ftxt = ftxt
+	if c_str == s_curr:
+		return c_str
+	else:
+		return ''
 
-		def advance(self, current_char=None):
-				self.idx += 1
-				self.col += 1
+def fix_default_format(assign_a):
+#a[x|y] a[b[x|y]] a[i][j][x|y] a[i|k][j][x|y] a[b[x|y]|z] a[b[x]|c[y]]
+#a[b[x]|c[y]] | a[b[x|y]|c[z]] | a[b[x]|c[y|z]]
+	lexer = BodyLexer(None, assign_a)
+	tokens = lexer.make_tokens()
+	r_str = ''
+	for token in tokens:
+		s_curr = ''
+		s_stack = []
+		for i in token.value:
+			if i == '[':
+				if s_curr:
+					s_stack.append(s_curr)
+				s_curr = i
+			elif i == ']':
+				s_curr += i
+				if '|' in s_curr:
+					x,y = s_curr[1:-1].split('|')
+					s_curr = f'.get({x}, {y})'
 
-				if current_char == '\n':
-						self.ln += 1
-						self.col = 0
-				return self
-
-class Token:
-	def __init__(self, type_, value=None):
-		self.type = type_
-		self.value = value
-
-	def __repr__(self):
-		if self.value: return f'{self.type}:{self.value}'
-		return f'{self.type}'
-
-class BodyLexer:
-	def __init__(self, fn, text):
-		self.fn = fn
-		self.text = text
-		self.pos = Position(-1, 0, -1, fn, text)
-		self.current_char = None
-		self.advance()
-
-	def advance(self):
-		self.pos.advance(self.current_char)
-		self.current_char = self.text[self.pos.idx] if self.pos.idx < len(self.text) else None
-
-	def make_tokens(self):
-		tokens = []
-		while self.current_char != None:
-			if self.current_char in '\t\n':
-				self.advance()
-			elif self.current_char in '[]':
-				tokens.append(Token("TOKEN", self.current_char))
-				self.advance()
+				if s_stack:
+					pre_s = s_stack.pop()
+					s_curr = pre_s+s_curr
 			else:
-				tokens.append(self.make_expr())
-		return tokens
+				s_curr += i
+		r_str += s_curr
+	return r_str
 
-	def make_expr(self):
-		id_str = ''
-		while self.current_char != None and self.current_char not in '[]':
-			# +-*/%^={}()[]:,\t\n':
-			id_str += self.current_char
-			self.advance()
-
-		tok_type = 'EXPR'
-		return Token(tok_type, id_str)

@@ -3,6 +3,7 @@
 
 from util import *
 from kiwi_util import *
+from kiwi_lexer import *
 
 class ResultLexer:
 	def __init__(self, fn, text):

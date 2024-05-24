@@ -277,7 +277,7 @@ Example:
 
 #### index_by function:
 
-    index_by(expression) is a wikispec function, which returns the next index for a generated value.
+index_by(expression) is a wikispec function, which returns the next index for a generated value.
 
 ### FROM clause:
 
@@ -287,6 +287,13 @@ Syntax:
 
 FROM operator declares a variable as a key or index identifier for a specific json structure.
 With FROM clause an expression is specified and the valid instantiations defines the value set.
+
+#### RANGE expression:
+    
+range(value) create a list which can be index by a variable to create a set of instantiations.
+
+Example:
+    i from range[10][i]
 
 ### COLLECT SET:
 
@@ -455,16 +462,17 @@ Syntax:
 
     unit_logic_string := (logic_unit_1 | logic_unit_2), { ("AND" | "OR"), (logic_unit_1 | logic_unit_2) }
 
-    eval_as_clause := "COLLECT EVAL", "(", (kiwi_expr | unit_logic_string), {name, "=", name}, ")", "AS", name
+    eval_as_clause := "COLLECT EVAL", "(", (kiwi_expr | unit_logic_string), {name, "=", name}, ")", "by", var, "AS", name
 
 Example:
 
-    COLLECT EVAL(gl_ex | gl_e, v1 = p1, v2 = p2, ...) AS gc
+    COLLECT EVAL(gl_ex | gl_e, v1 = p1, v2 = p2, ...) by x, y AS gc
 
 where gl_ex is an expresion which will create a composite logic string after instantiation.
 gl_ex is a composite logic string.
 v1, v2, ... are variables refered in the Composite logic definition.
-P1, P2, ... are expressions, the calculated instantiation results will be passed in as parameters for Composite logic evaluation.  
+P1, P2, ... are expressions, the calculated instantiation results will be passed in as parameters for Composite logic evaluation. 
+x, y are identified key variables or index variables, which will be instantiated during logic expression evaluation.
 
 The aggregated logic result from multiple evaluations of the logic unit will be assigned to gc.
 
@@ -514,13 +522,14 @@ The `CREATE` statement defines output formats using templates, with each templat
 Syntax:
 
     update_kiwi_expr := (name, {"[", (var | name | update_kiwi_expr )"]"})
-    update_as_clause := update_kiwi_expr, ["WHERE", (condition_ex | logic_ex)], "AS", update_kiwi_expr
+    update_as_clause := update_kiwi_expr,  "AS", update_kiwi_expr
+    update_delete_clause := update_kiwi_expr,  "DELETE"
 
     update := "UPDATE",
         "VAR", var, {",", var},
             
         "SET", ":",
-            update_as_clause, ";", {update_as_clause ";"},
+            update_as_clause | update_delete_clause, ";", {update_as_clause | update_delete_clause ";"},
             [where_clause]
 
 
@@ -528,6 +537,7 @@ where var represents variables acting as placeholders for keys or indices in a J
 The UPDATE statement defines how to modify a JSON structure.
 
 By iterating through instantiations of the variables, the left-hand side of the expression is assigned the value of the corresponding right instantiation, provided that the conditions specified in the condition expression are met.
+
 
 ### DEFINE:
 

@@ -1,5 +1,6 @@
 # Author: Hong Xiao
 # This file includes the utility code for translating code in KiwiSpec to python and executes the python code.
+from logic_expr import *
 
 def write_json_file(file_name, data):
     import json
@@ -118,48 +119,6 @@ def collect_logic_list(input_logic, identifier_str='not'):
             input_logic = input_logic[len(identifier_str):]
     return collect_s
 
-def get_var_depend(logic_expr, var_list):
-    var_depend = []
-    s_curr = ''
-
-    for _i in logic_expr:
-        if _i == '[':
-            s_curr = _i
-        elif _i == ']':
-            s_curr = s_curr.strip('[')
-            if s_curr in var_list:
-                var_depend.append(s_curr.strip())
-            s_curr = ''
-        else:
-            s_curr += _i
-    return var_depend
-
-def get_negate_var_depend(condition, var_list):
-    negate_sub_logic_list = collect_logic_list(condition, 'not')
-
-    global_condition = condition
-
-    for sub_logic in negate_sub_logic_list:
-        global_condition = global_condition.replace(sub_logic, ' ')
-
-    global_depend = get_var_depend(global_condition, var_list)
-
-    negate_sub_logic_var = {}
-
-    for sub_logic in negate_sub_logic_list:
-        negate_sub_logic_var[sub_logic] = {'local_depend':[], 
-                                        'global_depend':[]}
-
-        local_var = get_var_depend(sub_logic, var_list)
-        for t_var in local_var:
-            if t_var in global_depend:
-                negate_sub_logic_var[sub_logic]['global_depend'].append(t_var)
-            else:
-                negate_sub_logic_var[sub_logic]['local_depend'].append(t_var)
-
-    return negate_sub_logic_var
-    
-
 def collect_eval(logic_input_string, input_ps, con_var_dep):
     input_string = logic_input_string
 
@@ -172,20 +131,19 @@ def collect_eval(logic_input_string, input_ps, con_var_dep):
 
     result_list = {}
     for sub_logic in unit_sub_logic_list:
-        negate_sub_logic_var = get_negate_var_depend(sub_logic, con_var_dep.keys())
-        result_list[sub_logic] = execute_logic(sub_logic[len('unit'):], con_var_dep, '', negate_sub_logic_var)
+        use_con_var_dep = {}
+        for k, v in con_var_dep.items():
+            if k in sub_logic:
+               use_con_var_dep[k] = v 
 
-    for r_k, r_v in result_list.items():
-        input_string = input_string.replace(r_k, str(r_v))
+        sub_logic_r = execute_logic(sub_logic[len('unit'):], use_con_var_dep)
 
-    r = eval(input_string)
-    return  r
+        input_string.replace(sub_logic, str(sub_logic_r))
+        if test_expr(input_string.replace('unit', ' '), ''):
+            return eval_with_var(input_string.replace('unit', ' '), '')
+        
+    return  test_and_eval_logic(input_string.replace('unit', ' '), '')
 
-import re
-
-def get_sub_cond(con):
-    cond_expr = re.split(r'\b(?:and|or|not)\b', con, flags=re.IGNORECASE)
-    return cond_expr
 
 def eval_with_var(ex, value_str):
     if value_str:
@@ -199,76 +157,58 @@ def test_expr(ex, value_str):
     except:
         return False
     
-def test_logic(ex, value_str):
-    if test_expr(ex, value_str):
+def test_and_eval_logic(ex, value_str):
+    try:
         return eval_with_var(ex, value_str)
-    else:
+    except:
         return False
     
-def get_ex_keys(ex):
-    return (ex.keys() if isinstance(ex, dict) else (range(len(ex)) if isinstance(ex, list) else []))
+    
+def execute_logic(con_string, con_var_dep):
+    
+    lexer = LogicLexer(con_string)
+    tokens, error = lexer.make_tokens()
+    if error: raise
 
-def execute_logic(con_string, con_var_dep, value_str='', negate_sub_logic={}):
+    parser = LogicParser(tokens)
+    ast = parser.parse()
+    if ast.error: raise
+
+    return execute_logic_call(tokens, con_string, con_var_dep, '', ast)
+
+def execute_logic_call(tokens, con_string, con_var_dep, value_str, ast):
+    while con_var_dep:
+        vr = list(con_var_dep.keys())[0]
+        ex = con_var_dep[vr]
+        if not test_expr(ex, value_str):
+            for ei in tokens:
+                if ei.value is not None and ex in ei.value:
+                    if ' not ' in ei.value:
+                        ei.value = 'True'
+                    else:
+                        ei.value = 'False'
+            del con_var_dep[vr]
+        else:
+            break
+    
     if not con_var_dep:
-        return test_logic(con_string, value_str)
-
-    con_string_list = get_sub_cond(con_string)
+        interpreter = LogicInterpreter()
+        return interpreter.visit(ast.node, value_str)
+    
     vr = list(con_var_dep.keys())[0]
     ex = con_var_dep[vr]
-    if not test_expr(ex, value_str):
-        for ei in con_string_list:
-            if ei.lower().strip() != 'not' and ex in ei:
-                con_string = con_string.replace(ei, ' False ')
-
-        if test_expr(con_string, value_str):
-            return eval_with_var(con_string, value_str)
-
-    for sub_logic, depens in negate_sub_logic.items():
-        if (set(depens['global_depend']) - set(con_var_dep.keys()) == set(depens['global_depend'])):
-            local_con_var_dep = {}
-            for _k in con_var_dep.keys():
-                if _k in depens['local_depend']:
-                    local_con_var_dep[_k] = con_var_dep[_k]
-            sub_r = execute_logic(sub_logic, local_con_var_dep, value_str)
-            con_string = con_string.replace(sub_logic, f'{sub_r}')
-
-    new_con_var_dep = {}
-    for _k, _v in con_var_dep.items():
-        if f'[{_k}]' in con_string:
-            new_con_var_dep[_k] = _v 
-
-    con_var_dep = new_con_var_dep
-
-    if not con_var_dep:
-        return execute_logic(con_string, con_var_dep, value_str)
-
-    vr = list(con_var_dep.keys())[0]
-    ex = con_var_dep[vr]
-
     del con_var_dep[vr]
 
-    t_ex= eval_with_var(ex, value_str)
-    
-    if con_string.lower().startswith('not'):
-        r = True
-        con_string = 'not'+con_string[len('not'):]
-        for _i in get_ex_keys(t_ex):
-            r = r and execute_logic(con_string, con_var_dep, 
-                                    value_str+f'{vr} = "{_i}";' if isinstance(_i, str) else value_str+f'{vr} = {_i};', 
-                                    negate_sub_logic)
-            if not r:
-                return r
-        return r 
-    else:
-        r = False
-        for _i in get_ex_keys(t_ex):
-            r = execute_logic(con_string, con_var_dep, 
-                                    value_str+f'{vr} = "{_i}";' if isinstance(_i, str) else value_str+f'{vr} = {_i};', 
-                                    negate_sub_logic)
-            if r:
-                return r
-        return r   
+    v_vr = eval_with_var(f'{ex}.keys() if isinstance({ex}, dict) else (range(len({ex})) if isinstance({ex}, list) else [])', value_str)
 
+    result = True
+
+    for _v in v_vr:
+        value_str += f'{vr} = "{_v}";' if isinstance(_v, str) else f'{vr} = {_v};' 
+        result = result and execute_logic_call(tokens, con_string, con_var_dep, value_str, ast)
+        if not result:
+            return result
+    return result
 
 def execute_code(result, result_v):
     exec(result, globals())
@@ -304,3 +244,57 @@ def draw_conn(connections):
     plt.show()
 
 
+#######################################
+# INTERPRETER
+#######################################
+
+class LogicInterpreter:
+    def visit(self, node, value_str):
+        method_name = f'visit_{type(node).__name__}'
+        method = getattr(self, method_name, self.no_visit_method)
+        return method(node, value_str)
+
+    def no_visit_method(self, node, value_str):
+        raise Exception(f'No visit_{type(node).__name__} method defined')
+    
+    def visit_L_ExprNode(self, node, value_str):
+        return test_and_eval_logic(node.tok.value, value_str)
+    
+    def visit_BinOpNode(self, node, value_str):
+        left = self.visit(node.left_node, value_str)
+        right = self.visit(node.right_node, value_str)
+
+        if node.op_tok.type == TT_OR:
+            result = left or right
+        elif node.op_tok.type == TT_AND:
+            result = left and right
+		
+        return result
+
+    def visit_UnaryOpNode(self, node, value_str):
+        l_not = self.visit(node.node, value_str)
+
+        if node.op_tok.type == TT_NOT:
+            return not l_not
+
+
+#######################################
+# RUN
+#######################################
+
+def logic_eval(text, value_str):
+	# Generate tokens
+	lexer = LogicLexer(text)
+	tokens, error = lexer.make_tokens()
+	if error: raise
+	
+	# Generate AST
+	parser = LogicParser(tokens)
+	ast = parser.parse()
+	if ast.error: raise
+
+	# Run program
+	interpreter = LogicInterpreter()
+	result = interpreter.visit(ast.node, value_str)
+
+	return result

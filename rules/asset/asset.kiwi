@@ -1,6 +1,6 @@
 define conn_path=../sample_data/zeek, write_path=../sample_data/result
 
-# get a list of all the workloads ip addreses
+# get the list of all the workloads ip addreses
 READ write_path/ip_to_servers.json AS srv; conn_path/conn.json AS flows
 CREATE ips AS r
 VAR i SELECT

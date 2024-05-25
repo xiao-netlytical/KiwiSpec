@@ -43,7 +43,8 @@ where
 write write_path/server_to_ips.json from r
 
 # get mapping of ip address to the list of applications
-# from the existing app to ips mapping
+# from the existing ip to server mapping, remove the WebServer from the application list 
+# if the ip supports other applications.
 read write_path/ip_to_servers.json as srv
 update srv 
 var ip set 
@@ -52,22 +53,17 @@ var ip set
 write write_path/clean_ip_to_servers.json from srv
 
 # get mapping of ip address to the list of applications
-# from the existing app to ips mapping
-read write_path/clean_ip_to_servers.json as ip_srv
-create {srv: ips} as r
-var ip select 
-    ip_srv[_][_] as srv; 
-    collect set(ip from ip_srv[ip]) as ips; where srv in ip_srv[ip]
-write write_path/clean_server_to_ips.json from r
+# from the existing application to ips mapping
 
 read write_path/clean_ip_to_servers.json as ip_srv
 create {srv: ips} as r
 var ip select 
     ip_srv[ip][_] as srv; 
-    collect set(ip) as ips
+    collect set(ip) group by srv as ips
 write write_path/clean_server_to_ips.json from r
 
-# protocol/port an application server can accept and send
+# get the list of protocol/port which an application server can accept and send
+# get_application_protocol is a function which will pull out the protocol/port for a server
 read app_define/application_rule.json as application
 create {name: {"in_proto": in_proto, "out_proto": out_proto}} as r 
 var i select 
@@ -76,12 +72,12 @@ var i select
     get_application_protocol(application[i]["outbound_protocol"]) as out_proto
 write app_define/app_protos.json from r
 
-# Service to service name mapping
+# Protocol to service name mapping
 READ app_define/service-names-port-numbers.json as service_name
 create {proto:disc} as r1 
 VAR i select
-    service_name["service"][i]["Transport Protocol"].upper()+"_"+service_name["service"][i]["Port Number"] as proto;
-    collect set(service_name["service"][i]["Description"]) as disc
+    service_name[i]["Transport Protocol"].upper()+"_"+service_name[i]["Port Number"] as proto;
+    collect set(service_name[i]["Description"]) as disc
 
 update var i set
 r1[i]  as ",".join(r1[i])
@@ -106,17 +102,18 @@ var i select
     flows[i]["id.resp_h"] as ip2;
     collect set((flows[i]["proto"], flows[i]["id.resp_p"])) group by ip2 as in_port;
     where flows[i]["conn_state"] in ["OTH", "SF", "S1", "S2", "S3", "RSTO", "RSTR"]
+WRITE write_path/ip_apps_out_port.json from r_src; write_path/ip_apps_in_port.json from r_dst 
 
 create {ip:apps} as r 
-var ip, k, x, y select 
+var ip, k, x,y select 
     r_dst[ip] as in_p_set; 
     r_src[ip | []] as out_p_set; 
-    collect eval(application[k]["lookup_condition"]: proto=in_p_set[x][0], port=in_p_set[x][1], out_proto =out_p_set[y][0], out_port=out_p_set[y][1]) group by x,y as app_condition;
+    collect eval(application[k]["lookup_condition"]: proto=in_p_set[x][0], port=in_p_set[x][1], out_proto =out_p_set[y][0], out_port=out_p_set[y][1]) iter by x,y as app_condition;
     collect list(application[k]["app_name"]) where app_condition group by ip as apps
 
 WRITE write_path/ip_apps_t.json from r
 
-# This spec strip of the IP to empty server list mapping
+# This spec strip off the IP which is mapped to empty server list.
 create {i:result} as r1
 var i select
 	r[i] as result;

@@ -217,7 +217,7 @@ i from ip_server[i];
 ip_to_group[i] as ip_server[i]
 
 update var i set
-i from ip_server[i];
+i from ip_unknown_server[i];
 ip_to_group[i] as ip_unknown_server[i]
 
 update var i set
@@ -226,18 +226,22 @@ ip_to_group[webservers[i]] as "WEB_server"
 update var i set
 ip_to_group[clients[i]] as "Client"
 
+write write_path/ip_to_group.json from ip_to_group;
+
 create [{"src":s_group, "dst":d_group, "protos":protos}] as traffic
 var i select
     ip_to_group[flows[i]["id.orig_h"]] AS s_group;
     ip_to_group[flows[i]["id.resp_h"]] AS d_group;
     flows[i]["proto"].upper()+"_"+str(flows[i]["id.resp_p"]) AS proto;
     collect set (proto) group by s_group, d_group as protos;
+write write_path/ip_to_group.json from traffic
 
+read write_path/ip_to_group.json as traffic
 create [tr] as traffic_list
 var i select
     [traffic[i]["src"], traffic[i]["dst"]] as tr
 
-write write_path/ip_to_group.json from ip_to_group; write_path/traffic_list.json from traffic_list
+write write_path/traffic_list.json from traffic_list
 draw traffic_list
 
 

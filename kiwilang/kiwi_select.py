@@ -220,8 +220,8 @@ class CreateBodyParser:
 				assign_ex = assign_ex.strip()
 			elif str_in('collect eval', assign_ex):
 				access = 'eval'
-				if str_in(' by ', assign_ex):
-					assign_ex, group_by = split(assign_ex, ' by ')
+				if str_in(' iter by ', assign_ex):
+					assign_ex, group_by = split(assign_ex, ' iter by ')
 					exclude_list = list_strip(group_by.split(','))
 					self.var_list = self.var_list+exclude_list
 				assign_ex = strip_operator(assign_ex.strip(), ['collect eval'])
@@ -419,11 +419,11 @@ class CreateBodyParser:
 					vu, va = list_strip(split(self.assign_list[_i], ' as '))
 					vu_if = ''
 					if va in self.var_agg_map.keys():
-						if str_in(' group by ',vu) or str_in(' by ',vu):
+						if str_in(' group by ',vu) or str_in(' iter by ',vu):
 							if str_in(' group by ',vu):
 								vu, c_vu = split(vu, ' group by ')
-							if str_in(' by ',vu):
-								vu, c_vu = split(vu, ' by ')
+							if str_in(' iter by ',vu):
+								vu, c_vu = split(vu, ' iter by ')
 
 							c_vu = c_vu.split(',')
 							for c_v in c_vu:

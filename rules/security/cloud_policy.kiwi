@@ -49,7 +49,7 @@ var i select
 
 where i in ["containers", "initContainers", "ephemeralContainers"];
     container["securityContext"]["capabilities"]["add"][_] not in allowed or
-    must_drop and not(must_drop[_] in container["securityContext"]["capabilities"]["drop"])
+    must_drop and not must_drop[_] in container["securityContext"]["capabilities"]["drop"]
 
 write write_path/pod_capabilities.json from r
 #######################
